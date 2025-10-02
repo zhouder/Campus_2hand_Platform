@@ -1,0 +1,185 @@
+/* 全局基础样式 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    /*overflow: hidden; !* 防止提示框弹出时出现滚动条 *!*/
+}
+
+/* 主容器，用于包裹标题和表单 */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px; /* 标题和表单之间的间距 */
+}
+
+/* 系统大标题样式 */
+.system-title {
+    font-size: 2.2rem; /* 调整大标题字体大小 */
+    color: #333;
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+/* 表单容器样式 */
+.form-container {
+    background-color: #ffffff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+/* 表单内的标题 */
+.form-container h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 1.5rem; /* 调整表单内标题大小 */
+}
+
+/* 表单组样式 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="tel"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* 红色必填星号样式 */
+.required-star {
+    color: #e74c3c; /* 红色 */
+    margin-left: 4px;
+}
+
+/* 密码框的父容器，用于相对定位 */
+.password-wrapper {
+    position: relative;
+}
+
+/* "小眼睛"图标样式 */
+.password-toggle-icon {
+    position: absolute;
+    top: 42px; /* 根据label高度和input内边距微调 */
+    right: 12px;
+    cursor: pointer;
+    color: #999;
+    user-select: none; /* 防止点击时选中图标 */
+}
+
+.password-toggle-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor; /* 让SVG颜色跟随父元素color属性 */
+}
+
+
+/* 按钮样式 */
+.btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+/* 忘记密码页面的提示文字 */
+.info-text {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 20px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* 底部链接样式 */
+.footer-link {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.footer-link p {
+    color: #666;
+}
+
+.footer-link a {
+    color: #007bff;
+    text-decoration: none;
+    margin: 0 5px; /* 给链接之间增加一点间距 */
+}
+
+.footer-link a:hover {
+    text-decoration: underline;
+}
+
+/* ========================================= */
+/* 【新增】消息提示框样式            */
+/* ========================================= */
+.toast-message {
+    position: fixed; /* 固定在屏幕上 */
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%); /* 水平居中 */
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    z-index: 1000;
+    opacity: 0; /* 默认透明 */
+    transition: opacity 0.5s, top 0.5s;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+/* 成功消息的样式 */
+.toast-message.success {
+    background-color: #28a745; /* 绿色 */
+}
+
+/* 错误消息的样式 */
+.toast-message.error {
+    background-color: #dc3545; /* 红色 */
+}
+
+/* 消息框显示时的动画效果 */
+.toast-message.show {
+    top: 50px;
+    opacity: 1;
+}
+
