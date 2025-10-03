@@ -14,6 +14,12 @@
             font-size: 2rem;
             margin-bottom: 20px;
         }
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px; /* 按钮之间的间距 */
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -22,30 +28,30 @@
     <div class="form-container welcome-container">
         <h1 class="welcome-message">欢迎你, <span id="nickname-display">访客</span>!</h1>
         <p>这里是校园二手物品交易平台主页。</p>
-        <button id="logout-btn" class="btn" style="background-color: #dc3545; max-width: 200px; margin-top: 20px;">退出登录</button>
+        <div class="action-buttons">
+            <button id="publish-btn" class="btn">发布新商品</button>
+            <button id="logout-btn" class="btn" style="background-color: #dc3545;">退出登录</button>
+        </div>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 尝试从 localStorage 获取已登录的用户信息
         const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
 
         if (loggedInUser && loggedInUser.nickname) {
-            // 如果找到了用户信息，就显示用户的昵称
             document.getElementById('nickname-display').textContent = loggedInUser.nickname;
         } else {
-            // 如果没有找到，说明用户未登录，可以跳转回登录页
             alert('您尚未登录，请先登录！');
             window.location.href = '/login.html';
         }
 
-        // 处理退出登录按钮
-        const logoutBtn = document.getElementById('logout-btn');
-        logoutBtn.addEventListener('click', function() {
-            // 清除 localStorage 中的用户信息
+        document.getElementById('publish-btn').addEventListener('click', function() {
+            window.location.href = '/publish.html';
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', function() {
             localStorage.removeItem('loggedInUser');
-            // 跳转回登录页
             window.location.href = '/login.html';
         });
     });
@@ -53,3 +59,4 @@
 
 </body>
 </html>
+

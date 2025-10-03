@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布新商品</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="main-container">
+    <div class="form-container publish-form-container">
+        <h1>发布您的闲置宝贝</h1>
+        <form id="publishForm">
+            <!-- 商品标题 -->
+            <div class="form-group">
+                <label for="title">商品标题 <span class="required-star">*</span></label>
+                <input type="text" id="title" name="title" placeholder="例如：九成新自行车" required>
+            </div>
+
+            <!-- 商品品类 -->
+            <div class="form-group">
+                <label for="category">商品品类 <span class="required-star">*</span></label>
+                <select id="category" name="category" required>
+                    <option value="">--请选择品类--</option>
+                    <option value="electronics">数码电子</option>
+                    <option value="books">书籍教材</option>
+                    <option value="daily_necessities">生活日用</option>
+                    <option value="stationery">文具用品</option>
+                    <option value="sports">体育器材</option>
+                    <option value="clothing">衣物鞋帽</option>
+                    <option value="other">其他</option>
+                </select>
+            </div>
+
+            <!-- 价格 -->
+            <div class="form-group">
+                <label for="price">价格 (元) <span class="required-star">*</span></label>
+                <input type="text" id="price" name="price" placeholder="例如: 99.99" required pattern="^\d+(\.\d{1,2})?$">
+            </div>
+
+            <!-- 交易地点 -->
+            <div class="form-group">
+                <label for="location">交易地点 <span class="required-star">*</span></label>
+                <input type="text" id="location" name="location" placeholder="例如：西一栋宿舍楼下" required>
+            </div>
+
+            <!-- 商品描述 -->
+            <div class="form-group">
+                <label for="description">商品描述 (200字以内)</label>
+                <textarea id="description" name="description" placeholder="详细描述一下您的宝贝吧..." maxlength="200"></textarea>
+            </div>
+
+            <!-- 商品图片 -->
+            <div class="form-group">
+                <label for="imageUpload">商品图片 (最多9张) <span class="required-star">*</span></label>
+                <div class="image-upload-container">
+                    <input type="file" id="imageUpload" accept="image/*" multiple>
+                    <div class="image-preview-grid" id="imagePreviewGrid">
+                        <!-- 图片预览将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">确认发布</button>
+        </form>
+    </div>
+</div>
+
+<!-- 消息提示框 -->
+<div id="toast-message" class="toast-message"></div>
+
+<script src="/js/script.js"></script>
+</body>
+</html>
+
