@@ -8,7 +8,6 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    /*overflow: hidden; !* 防止提示框弹出时出现滚动条 *!*/
 }
 
 /* 主容器，用于包裹标题和表单 */
@@ -27,14 +26,14 @@ body {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
-/* 表单容器样式 */
+/* 默认表单容器样式 (用于登录、注册等页面) */
 .form-container {
     background-color: #ffffff;
     padding: 30px 40px;
     border-radius: 8px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 400px;
+    max-width: 400px; /* 保持登录/注册页为窄样式 */
 }
 
 /* 表单内的标题 */
@@ -101,7 +100,6 @@ input:focus {
     fill: currentColor; /* 让SVG颜色跟随父元素color属性 */
 }
 
-
 /* 按钮样式 */
 .btn {
     width: 100%;
@@ -118,15 +116,6 @@ input:focus {
 
 .btn:hover {
     background-color: #0056b3;
-}
-
-/* 忘记密码页面的提示文字 */
-.info-text {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 20px;
-    text-align: center;
-    line-height: 1.5;
 }
 
 /* 底部链接样式 */
@@ -149,9 +138,7 @@ input:focus {
     text-decoration: underline;
 }
 
-/* ========================================= */
-/* 【新增】消息提示框样式            */
-/* ========================================= */
+/* 【新增】消息提示框样式 */
 .toast-message {
     position: fixed; /* 固定在屏幕上 */
     top: 20px;
@@ -182,3 +169,4 @@ input:focus {
     top: 50px;
     opacity: 1;
 }
+

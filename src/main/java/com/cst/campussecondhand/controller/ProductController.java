@@ -18,9 +18,6 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    /**
-     * 处理创建新商品的POST请求 (multipart/form-data)
-     */
     @PostMapping
     public ResponseEntity<?> createProduct(
             @RequestParam("title") String title,
@@ -32,7 +29,6 @@ public class ProductController {
             @RequestParam(value = "images", required = false) MultipartFile[] images) {
 
         try {
-            // 将接收到的参数封装成一个Product对象
             Product product = new Product();
             product.setTitle(title);
             product.setPrice(price);
