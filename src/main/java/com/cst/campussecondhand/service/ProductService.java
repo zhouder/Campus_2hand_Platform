@@ -5,6 +5,7 @@ import com.cst.campussecondhand.entity.User;
 import com.cst.campussecondhand.repository.ProductRepository;
 import com.cst.campussecondhand.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -63,6 +64,11 @@ public class ProductService {
         product.setImageUrls(String.join(",", imageUrls));
 
         return productRepository.save(product);
+    }
+
+    public List<Product> findAllProducts() {
+        // 按创建时间倒序
+        return productRepository.findAll(Sort.by(Sort.Direction.DESC, "createdTime"));
     }
 }
 
