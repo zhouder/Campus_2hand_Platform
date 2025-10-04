@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -46,20 +47,35 @@ public class ChatController {
         );
     }
 
-    // 获取两个用户间的历史消息
+    // 修改：获取两个用户间的历史消息，返回安全的 Map 列表
     @GetMapping("/api/messages/{recipientId}")
     @ResponseBody
-    public ResponseEntity<List<ChatMessage>> getChatHistory(@PathVariable Integer recipientId, HttpSession session) {
+    public ResponseEntity<List<Map<String, Object>>> getChatHistory(@PathVariable Integer recipientId, HttpSession session) {
         User currentUser = (User) session.getAttribute("loggedInUser");
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
         }
         List<ChatMessage> messages = chatMessageRepository.findBySenderIdAndRecipientIdOrSenderIdAndRecipientIdOrderByTimestampAsc(
                 currentUser.getId(), recipientId, recipientId, currentUser.getId());
-        return ResponseEntity.ok(messages);
+
+        // 将 ChatMessage 转换为 Map
+        List<Map<String, Object>> response = messages.stream().map(message -> {
+            Map<String, Object> msgMap = new java.util.HashMap<>();
+            msgMap.put("content", message.getContent());
+            msgMap.put("timestamp", message.getTimestamp());
+
+            Map<String, Object> senderMap = new java.util.HashMap<>();
+            senderMap.put("id", message.getSender().getId());
+            senderMap.put("nickname", message.getSender().getNickname());
+            msgMap.put("sender", senderMap);
+
+            return msgMap;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
-    // 获取当前用户的所有对话列表
+    // 修改：获取当前用户的所有对话列表
     @GetMapping("/api/conversations")
     @ResponseBody
     public ResponseEntity<?> getConversations(HttpSession session) {
@@ -68,10 +84,16 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
 
-        // 注意：这里我们将返回类型从 Object 改为 User
-        List<User> partners = chatMessageRepository.findConversationPartners(currentUser.getId());
+        // 1. 调用新的方法获取伙伴ID列表
+        List<Integer> partnerIds = chatMessageRepository.findConversationPartnerIds(currentUser.getId());
+        if (partnerIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
 
-        // 手动将 User 列表转换为 Map 列表，只包含前端需要的安全字段
+        // 2. 根据ID列表一次性查询所有 User 对象
+        List<User> partners = userRepository.findAllById(partnerIds);
+
+        // 3. 将 User 列表转换为安全的 Map 列表
         List<Map<String, Object>> response = partners.stream().map(user -> {
             Map<String, Object> userMap = new java.util.HashMap<>();
             userMap.put("id", user.getId());

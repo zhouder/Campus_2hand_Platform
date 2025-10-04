@@ -14,6 +14,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Intege
             Integer senderId1, Integer recipientId1, Integer senderId2, Integer recipientId2);
 
     // 查找与指定用户相关的所有对话伙伴
-    @Query("SELECT DISTINCT CASE WHEN m.sender.id = ?1 THEN m.recipient ELSE m.sender END FROM ChatMessage m WHERE m.sender.id = ?1 OR m.recipient.id = ?1")
-    List<User> findConversationPartners(Integer userId);
+    @Query("SELECT DISTINCT CASE WHEN m.sender.id = ?1 THEN m.recipient.id ELSE m.sender.id END FROM ChatMessage m WHERE m.sender.id = ?1 OR m.recipient.id = ?1")
+    List<Integer> findConversationPartnerIds(Integer userId);
 }
