@@ -131,18 +131,15 @@
     <div class="form-group" id="password-view-group">
         <label>密码</label>
         <div class="input-wrapper">
-            <input type="password" value="********" disabled>
+            <input type="password" id="password-view" value="********" disabled>
+            <i class="fa-solid fa-eye password-toggle-icon" id="password-toggle-icon"></i>
         </div>
     </div>
 
     <div id="password-edit-groups" style="display: none;">
         <div class="form-group">
-            <label for="oldPassword">旧密码</label>
-            <input type="password" id="oldPassword" placeholder="请输入旧密码">
-        </div>
-        <div class="form-group">
             <label for="newPassword">新密码</label>
-            <input type="password" id="newPassword" placeholder="留空则不修改密码">
+            <input type="text" id="newPassword" placeholder="留空则不修改密码">
         </div>
     </div>
 
@@ -159,45 +156,46 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // DOM 元素
+        // --- DOM 元素获取 ---
         const avatarImg = document.getElementById('avatar');
         const avatarUpload = document.getElementById('avatar-upload');
         const avatarEditOverlay = document.getElementById('avatar-edit-overlay');
-
         const nicknameInput = document.getElementById('nickname');
         const emailInput = document.getElementById('email');
         const phoneInput = document.getElementById('phone');
-
         const passwordViewGroup = document.getElementById('password-view-group');
         const passwordEditGroups = document.getElementById('password-edit-groups');
-        const oldPasswordInput = document.getElementById('oldPassword');
         const newPasswordInput = document.getElementById('newPassword');
-
+        const passwordViewInput = document.getElementById('password-view');
+        const passwordToggleIcon = document.getElementById('password-toggle-icon');
         const editBtn = document.getElementById('edit-btn');
         const saveBtn = document.getElementById('save-btn');
         const cancelBtn = document.getElementById('cancel-btn');
-
         const viewModeButtons = document.getElementById('view-mode-buttons');
         const editModeButtons = document.getElementById('edit-mode-buttons');
 
         let originalData = {};
         let selectedAvatarFile = null;
 
+        // --- 函数定义 ---
+
         /**
-         * 生成默认头像
+         * 根据昵称和背景色生成一个默认头像
+         * @param {string} nickname - 用户昵称
+         * @param {string} bgColor - 头像的背景色
+         * @returns {string} - Base64格式的图片数据
          */
-        function generateAvatar(nickname,bgColor) {
+        function generateAvatar(nickname, bgColor) {
             const canvas = document.createElement('canvas');
             canvas.width = 100;
             canvas.height = 100;
-
             const ctx = canvas.getContext('2d');
-
             const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
-            // 使用传入的颜色，如果没有，则随机选一个作为备用
             const finalBgColor = bgColor || colors[Math.floor(Math.random() * colors.length)];
+
             ctx.fillStyle = finalBgColor;
             ctx.fillRect(0, 0, 100, 100);
+
             ctx.font = 'bold 50px Arial';
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
@@ -209,7 +207,9 @@
             return canvas.toDataURL();
         }
 
-        // 切换到编辑模式
+        /**
+         * 切换到编辑模式
+         */
         function enterEditMode() {
             nicknameInput.disabled = false;
             emailInput.disabled = false;
@@ -217,16 +217,18 @@
             passwordViewGroup.style.display = 'none';
             passwordEditGroups.style.display = 'block';
             avatarEditOverlay.style.display = 'flex';
-
             viewModeButtons.style.display = 'none';
             editModeButtons.style.display = 'flex';
-            document.querySelector('.avatar-wrapper').setAttribute('for', 'avatar-upload'); // 允许点击
+            document.querySelector('.avatar-wrapper').setAttribute('for', 'avatar-upload');
         }
 
-        // 切换到查看模式
+        /**
+         * 切换回查看模式，并重置所有输入框为原始数据
+         */
         function exitEditMode() {
-            nicknameInput.value = originalData.nickname;
-            emailInput.value = originalData.email;
+            // 恢复原始数据显示
+            nicknameInput.value = originalData.nickname || '';
+            emailInput.value = originalData.email || '';
             phoneInput.value = originalData.phone || '';
             if (originalData.avatarUrl) {
                 avatarImg.src = originalData.avatarUrl;
@@ -234,22 +236,28 @@
                 avatarImg.src = generateAvatar(originalData.nickname, originalData.avatarBgColor);
             }
 
+            // 禁用输入框
             nicknameInput.disabled = true;
             emailInput.disabled = true;
             phoneInput.disabled = true;
+
+            // 切换按钮和密码框的可见性
             passwordViewGroup.style.display = 'block';
             passwordEditGroups.style.display = 'none';
-            oldPasswordInput.value = '';
-            newPasswordInput.value = '';
+            newPasswordInput.value = ''; // 清空新密码输入
             avatarEditOverlay.style.display = 'none';
-            document.querySelector('.avatar-wrapper').removeAttribute('for'); // 禁止点击
+            document.querySelector('.avatar-wrapper').removeAttribute('for');
             selectedAvatarFile = null;
-
             viewModeButtons.style.display = 'flex';
             editModeButtons.style.display = 'none';
+
+            // 密码恢复为隐藏状态
+            passwordViewInput.type = 'password';
+            passwordViewInput.value = '********';
+            passwordToggleIcon.className = 'fa-solid fa-eye-slash password-toggle-icon';
         }
 
-        // 获取并显示用户信息
+        // --- 页面加载时的核心逻辑 ---
         fetch('/api/users/me')
             .then(response => {
                 if (response.status === 401) {
@@ -260,11 +268,18 @@
                 return response.json();
             })
             .then(user => {
-                if(user) {
-                    originalData = user;
-                    exitEditMode(); // 用查看模式函数初始化页面
+                if (user) {
+                    originalData = user; // 保存包括真实密码在内的所有数据
+                    exitEditMode(); // 使用此函数初始化页面状态
                 }
-            }).catch(err => console.error(err));
+            }).catch(err => {
+            if (err.message !== '未登录') {
+                console.error("获取用户信息失败:", err);
+            }
+        });
+
+
+        // --- 事件监听器 ---
 
         // 头像上传预览
         avatarUpload.addEventListener('change', (event) => {
@@ -278,13 +293,16 @@
             }
         });
 
+        // "编辑" 按钮
         editBtn.addEventListener('click', enterEditMode);
+
+        // "取消" 按钮
         cancelBtn.addEventListener('click', exitEditMode);
 
+        // "保存" 按钮
         saveBtn.addEventListener('click', async () => {
-            // Promise.all 可以并行处理多个异步请求
             try {
-                // 1. 更新头像 (如果有选择)
+                // 1. 更新头像 (如果用户选择了新文件)
                 if (selectedAvatarFile) {
                     const formData = new FormData();
                     formData.append('avatar', selectedAvatarFile);
@@ -293,7 +311,9 @@
                         body: formData
                     });
                     if (!avatarResponse.ok) throw new Error('头像上传失败');
-                    originalData = await avatarResponse.json(); // 更新数据
+                    // 保存成功后，用返回的最新用户数据更新 originalData
+                    const updatedUser = await avatarResponse.json();
+                    originalData = {...originalData, ...updatedUser};
                 }
 
                 // 2. 更新基本信息
@@ -311,18 +331,15 @@
                     const error = await profileResponse.json();
                     throw new Error(error.error || '信息更新失败');
                 }
-                originalData = await profileResponse.json(); // 更新数据
+                const profileData = await profileResponse.json();
+                originalData = {...originalData, ...profileData}; // 合并更新后的数据
 
-                // 3. 更新密码 (如果填写了)
+                // 3. 更新密码 (仅当用户在新密码框输入了内容时)
                 if (newPasswordInput.value) {
-                    if (!oldPasswordInput.value) {
-                        throw new Error('要修改密码，必须提供旧密码');
-                    }
                     const passwordResponse = await fetch('/api/users/me/password', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            oldPassword: oldPasswordInput.value,
                             newPassword: newPasswordInput.value
                         })
                     });
@@ -333,14 +350,37 @@
                 }
 
                 alert('信息更新成功！');
-                exitEditMode();
+
+                // 再次从后端获取最新的完整数据 (特别是更新后的密码)
+                const freshDataResponse = await fetch('/api/users/me');
+                originalData = await freshDataResponse.json();
+
+                exitEditMode(); // 切换回查看模式
 
             } catch (error) {
                 alert(`保存失败: ${error.message}`);
+                // 出错时也最好恢复到原始状态
+                exitEditMode();
+            }
+        });
+
+        // 密码查看小眼睛的点击逻辑
+        passwordToggleIcon.addEventListener('click', () => {
+            if (passwordViewInput.type === 'password') {
+                // 从隐藏切换到显示
+                passwordViewInput.type = 'text';
+                passwordViewInput.value = originalData.password; // 使用保存的真实密码
+                passwordToggleIcon.className = 'fa-solid fa-eye password-toggle-icon';
+            } else {
+                // 从显示切换回隐藏
+                passwordViewInput.type = 'password';
+                passwordViewInput.value = '********'; // 隐藏时用星号代替
+                passwordToggleIcon.className = 'fa-solid fa-eye-slash password-toggle-icon';
             }
         });
     });
 </script>
+
 
 </body>
 </html>

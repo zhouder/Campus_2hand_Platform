@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>发布新商品</title>
-    <!--    直接在这里设置样式-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -15,6 +15,30 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+        }
+
+        /* 新增：返回主页按钮样式 */
+        .back-to-home {
+            position: fixed;
+            top: 40px;
+            left: 50px; /* 放置在左上角 */
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            color: #333;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 999;
+        }
+        .back-to-home:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         /* 主容器 */
@@ -79,7 +103,6 @@
             margin-left: 4px;
         }
 
-        /* 按钮样式 */
         .btn {
             width: 100%;
             padding: 12px;
@@ -97,7 +120,6 @@
             background-color: #0056b3;
         }
 
-        /* 商品描述框 */
         textarea#description {
             height: 150px;
             resize: none;
@@ -162,7 +184,6 @@
             font-weight: 300;
         }
 
-        /* 图片删除按钮 */
         .remove-image-btn {
             position: absolute;
             top: 5px;
@@ -185,87 +206,15 @@
             background-color: rgba(0, 0, 0, 0.8);
         }
 
-        /* 灯箱样式 */
-        .lightbox {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.85);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .lightbox.show {
-            display: flex;
-        }
-
-        .lightbox-content {
-            margin: auto;
-            display: block;
-            max-width: 80%;
-            max-height: 80%;
-            animation: zoomIn 0.3s;
-        }
-
-        .lightbox-close {
-            position: absolute;
-            top: 25px;
-            right: 45px;
-            color: #fff;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-        }
-
-        .lightbox-close:hover,
-        .lightbox-close:focus {
-            color: #bbb;
-            text-decoration: none;
-        }
-
-        @keyframes zoomIn {
-            from {transform: scale(0.5);}
-            to {transform: scale(1);}
-        }
-
-        /* 消息提示框样式 */
-        .toast-message {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 20px;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 1rem;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.5s, top 0.5s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-
-        .toast-message.success {
-            background-color: #28a745; /* 绿色 */
-        }
-
-        .toast-message.error {
-            background-color: #dc3545; /* 红色 */
-        }
-
-        .toast-message.show {
-            top: 50px;
-            opacity: 1;
-        }
-
     </style>
 </head>
 <body>
+
+<!-- 新增的返回主页按钮 -->
+<a href="/index.html" class="back-to-home">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+
 <div class="main-container">
     <div class="form-container">
         <h1>发布您的闲置宝贝</h1>
@@ -319,64 +268,48 @@
     </div>
 </div>
 
-<div id="lightbox" class="lightbox">
-    <span class="lightbox-close">&times;</span>
-    <img class="lightbox-content" id="lightboxImg">
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
 
-        // 1. 页面加载时检查用户是否登录
         if (!loggedInUser) {
             alert('请先登录再发布商品！');
-            // 如果未登录，直接跳转到登录页面
             window.location.href = '/login.html';
-            return; // 阻止后续代码执行
+            return;
         }
 
         const publishForm = document.getElementById('publishForm');
         const imageUpload = document.getElementById('imageUpload');
         const imagePreviewGrid = document.getElementById('imagePreviewGrid');
         const uploadBox = document.getElementById('uploadBox');
-        let selectedFiles = []; // 用于存储用户选择的图片文件
+        let selectedFiles = [];
 
-        // 2. 处理表单提交事件
         publishForm.addEventListener('submit', function(event) {
             event.preventDefault();
 
-            // 使用 FormData 来构建包含文件和表单数据的请求
             const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
             formData.append('price', document.getElementById('price').value);
             formData.append('description', document.getElementById('description').value);
             formData.append('category', document.getElementById('category').value);
             formData.append('location', document.getElementById('location').value);
-
-            // 从之前存储在浏览器本地的 loggedInUser 对象中获取 sellerId
             formData.append('sellerId', loggedInUser.id);
-
-            // 将所有选择的图片文件添加到 FormData 中
             selectedFiles.forEach(file => {
                 formData.append('images', file);
             });
 
-            // 发送请求到后端
             fetch('/api/products', {
                 method: 'POST',
-                body: formData // 注意：使用 FormData 时不需要设置 Content-Type header
+                body: formData
             })
                 .then(response => {
-                    // 如果后端返回 401 或 403，说明 Session 过期或无效
                     if (response.status === 401 || response.status === 403) {
                         alert('您的登录已过期，请重新登录。');
-                        localStorage.removeItem('loggedInUser'); // 清除本地存储的用户信息
+                        localStorage.removeItem('loggedInUser');
                         window.location.href = '/login.html';
                         throw new Error('用户未授权');
                     }
                     if (!response.ok) {
-                        // 处理其他错误
                         return response.json().then(errorData => {
                             throw new Error(errorData.error || '发布失败，未知错误');
                         });
@@ -385,18 +318,15 @@
                 })
                 .then(data => {
                     alert('商品发布成功！');
-                    window.location.href = '/index.html'; // 成功后跳转到首页
+                    window.location.href = '/index.html';
                 })
                 .catch(error => {
-                    // 在控制台打印错误，并给用户提示
                     console.error('发布失败:', error);
-                    if (error.message !== '用户未授权') { // 避免重复提示
+                    if (error.message !== '用户未授权') {
                         alert(`发布失败: ${error.message}`);
                     }
                 });
         });
-
-        // --- 以下是图片上传预览和删除的逻辑 ---
 
         imageUpload.addEventListener('change', function(event) {
             const files = Array.from(event.target.files);
@@ -412,7 +342,6 @@
         });
 
         function renderImagePreviews() {
-            // 先清空现有的预览（除了上传按钮本身）
             imagePreviewGrid.innerHTML = '';
             imagePreviewGrid.appendChild(uploadBox);
 
@@ -425,13 +354,11 @@
                         <img src="${e.target.result}" alt="图片预览">
                         <div class="remove-image-btn" data-index="${index}">&times;</div>
                     `;
-                    // 将新的预览项插入到上传按钮之前
                     imagePreviewGrid.insertBefore(previewItem, uploadBox);
                 };
                 reader.readAsDataURL(file);
             });
 
-            // 如果图片数量达到9张，隐藏上传按钮
             if (selectedFiles.length >= 9) {
                 uploadBox.style.display = 'none';
             } else {
@@ -440,15 +367,13 @@
         }
 
         imagePreviewGrid.addEventListener('click', function(event) {
-            // 点击删除按钮时，从数组中移除对应的图片
             if (event.target.classList.contains('remove-image-btn')) {
                 const indexToRemove = parseInt(event.target.getAttribute('data-index'), 10);
                 selectedFiles.splice(indexToRemove, 1);
-                renderImagePreviews(); // 重新渲染预览
+                renderImagePreviews();
             }
         });
     });
 </script>
 </body>
 </html>
-

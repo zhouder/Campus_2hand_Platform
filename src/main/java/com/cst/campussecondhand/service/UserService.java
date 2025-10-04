@@ -53,6 +53,17 @@ public class UserService {
         if (!user.getPassword().equals(password)) {
             throw new RuntimeException("密码错误");
         }
+
+        // --- 新增逻辑 ---
+        // 检查老用户是否有头像背景色，如果没有则为他生成一个
+        if (user.getAvatarBgColor() == null || user.getAvatarBgColor().isEmpty()) {
+            String[] colors = {"#f44336", "#e91e63", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "#03a9f4", "#00bcd4", "#009688", "#4caf50", "#8bc34a", "#cddc39", "#ffeb3b", "#ffc107", "#ff9800", "#ff5722"};
+            String bgColor = colors[(int) Math.floor(Math.random() * colors.length)];
+            user.setAvatarBgColor(bgColor);
+            userRepository.save(user); // 保存到数据库
+        }
+        // --- 新增逻辑结束 ---
+
         return user;
     }
 
@@ -76,13 +87,13 @@ public class UserService {
     }
 
     // 修改密码
-    public void updatePassword(Integer userId, String oldPassword, String newPassword) {
+    public void updatePassword(Integer userId, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-        // 验证旧密码
-        if (!user.getPassword().equals(oldPassword)) {
-            throw new RuntimeException("旧密码错误");
+        // 如果新密码为空或未改变，则不执行任何操作
+        if (newPassword == null || newPassword.isEmpty() || user.getPassword().equals(newPassword)) {
+            return;
         }
 
         user.setPassword(newPassword);

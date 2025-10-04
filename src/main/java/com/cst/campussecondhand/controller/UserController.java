@@ -80,7 +80,7 @@ public class UserController {
         }
         // 从数据库重新获取最新的用户信息
         User latestUser = userService.findById(loggedInUser.getId());
-        latestUser.setPassword("******"); // 隐藏密码
+        //latestUser.setPassword("******"); // 隐藏密码
         return ResponseEntity.ok(latestUser);
     }
 
@@ -110,9 +110,9 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
         }
         try {
-            String oldPassword = passwordMap.get("oldPassword");
             String newPassword = passwordMap.get("newPassword");
-            userService.updatePassword(loggedInUser.getId(), oldPassword, newPassword);
+            // 调用简化后的方法
+            userService.updatePassword(loggedInUser.getId(), newPassword);
             return ResponseEntity.ok(Collections.singletonMap("message", "密码修改成功"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));

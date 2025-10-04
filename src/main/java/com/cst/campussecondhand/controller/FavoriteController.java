@@ -2,6 +2,7 @@ package com.cst.campussecondhand.controller;
 
 import com.cst.campussecondhand.entity.User;
 import com.cst.campussecondhand.service.FavoriteService;
+import com.cst.campussecondhand.service.ProductService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,9 @@ public class FavoriteController {
     @Autowired
     private FavoriteService favoriteService;
 
+    @Autowired
+    private ProductService productService;
+
     @PostMapping("/{productId}")
     public ResponseEntity<?> toggleFavorite(@PathVariable Integer productId, HttpSession session) {
         User loggedInUser = (User) session.getAttribute("loggedInUser");
@@ -27,7 +31,15 @@ public class FavoriteController {
 
         try {
             boolean isFavorited = favoriteService.toggleFavorite(loggedInUser.getId(), productId);
-            return ResponseEntity.ok(Collections.singletonMap("isFavorited", isFavorited));
+            // 同时获取最新的收藏数
+            int newCount = productService.findProductById(productId).getFavoriteCount();
+
+            // 在返回的数据中加入新的总数
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("isFavorited", isFavorited);
+            response.put("favoriteCount", newCount);
+
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }

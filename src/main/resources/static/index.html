@@ -499,8 +499,8 @@
                 if(response.ok) {
                     const user = await response.json();
 
-                    // 更新昵称
-                    sidebarUsername.textContent = user.nickname;
+                    // // 更新昵称
+                    // sidebarUsername.textContent = user.nickname;
 
                     // 更新头像
                     if(user.avatarUrl) {
@@ -546,13 +546,39 @@
                             if (response.status === 401) {
                                 alert('请先登录再收藏商品！');
                                 window.location.href = '/login.html';
-                                return;
+                                throw new Error('未授权');
                             }
                             if (!response.ok) throw new Error('操作失败');
-                            // 操作成功后，重新加载数据以获取最新状态
-                            fetchAndRenderProducts();
+                            return response.json();
                         })
-                        .catch(error => console.error("收藏操作失败:", error));
+                        .then(data => {
+                            // --- 这是核心修改 ---
+                            // 操作成功后，不再刷新整个页面
+                            // 而是直接更新当前按钮和收藏数的UI
+                            const isFavorited = data.isFavorited;
+                            const icon = button.querySelector('i');
+
+                            button.classList.toggle('favorited', isFavorited);
+                            icon.className = isFavorited ? 'fa-solid fa-star' : 'fa-regular fa-star';
+
+                            // 更新收藏数显示
+                            const countSpan = button.nextElementSibling; // 获取旁边的 favorite-count span
+                            if (countSpan) {
+                                // 简单地在当前数字上加一或减一
+                                let currentCount = parseInt(countSpan.textContent) || 0;
+                                if (isFavorited) {
+                                    currentCount++;
+                                } else {
+                                    currentCount--;
+                                }
+                                countSpan.textContent = `${Math.max(0, currentCount)}人已收藏`;
+                            }
+                        })
+                        .catch(error => {
+                            if (error.message !== '未授权') {
+                                console.error("收藏操作失败:", error)
+                            }
+                        });
                 });
                 button.dataset.listenerAttached = 'true';
             });
