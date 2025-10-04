@@ -209,9 +209,37 @@
             font-weight: bold;
             cursor: pointer;
         }
+
+        .back-to-home {
+            position: fixed;
+            top: 40px;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            color: #333;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 999;
+        }
+
+        .back-to-home:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
+
+<a href="/index.html" class="back-to-home">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
 
 <div class="container" id="product-detail-container" style="display: none;">
     <div class="product-gallery">
@@ -249,6 +277,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM元素获取 ---
         const productDetailContainer = document.getElementById('product-detail-container');
         const loadingMessage = document.getElementById('loading-message');
         const params = new URLSearchParams(window.location.search);
@@ -262,6 +291,11 @@
         let currentImageIndex = 0;
         let imageUrls = [];
 
+        // 收藏按钮相关元素
+        const favBtn = document.getElementById('fav-btn');
+        const favText = document.getElementById('fav-text');
+        const favIcon = favBtn.querySelector('i');
+
         // 灯箱相关元素
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightbox-img');
@@ -272,6 +306,16 @@
             return;
         }
 
+        /**
+         * 函数：根据传入的状态更新收藏按钮的UI
+         */
+        function updateFavoriteStatus(isFavorited, count) {
+            favBtn.classList.toggle('favorited', isFavorited);
+            favText.textContent = '收藏';
+            favIcon.className = isFavorited ? 'fa-solid fa-star' : 'fa-regular fa-star';
+        }
+
+        // 页面加载时，获取商品数据
         fetch(`/api/products/${productId}`)
             .then(response => {
                 if (!response.ok) throw new Error('商品不存在或加载失败。');
@@ -282,6 +326,9 @@
                 document.getElementById('product-price').textContent = product.price.toFixed(2);
                 document.getElementById('product-title').textContent = product.title;
                 document.getElementById('product-description').textContent = product.description || '卖家没有填写描述哦~';
+
+                // 初始化收藏按钮状态
+                updateFavoriteStatus(product.isFavorited, product.favoriteCount);
 
                 imageUrls = product.imageUrls || [];
                 if (imageUrls.length > 0) {
@@ -301,10 +348,33 @@
                 loadingMessage.textContent = error.message;
             });
 
+        // 为收藏按钮绑定点击事件
+        favBtn.addEventListener('click', () => {
+            fetch(`/api/favorites/${productId}`, { method: 'POST' })
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('请先登录再收藏商品！');
+                        window.location.href = '/login.html';
+                        return null; // 中断后续操作
+                    }
+                    if (!response.ok) throw new Error('操作失败');
+                    // 操作成功后，重新获取商品最新信息以更新UI
+                    return fetch(`/api/products/${productId}`);
+                })
+                .then(res => res ? res.json() : null)
+                .then(product => {
+                    if (product) {
+                        // 使用最新的数据更新收藏按钮的UI
+                        updateFavoriteStatus(product.isFavorited, product.favoriteCount);
+                    }
+                })
+                .catch(error => console.error("收藏操作失败:", error));
+        });
+
+        // --- 图片切换和灯箱的函数 ---
         function updateMainImage() {
             if (imageUrls.length === 0) return;
             mainImage.src = imageUrls[currentImageIndex];
-            // 更新缩略图的激活状态
             document.querySelectorAll('.thumbnail').forEach((thumb, index) => {
                 thumb.classList.toggle('active', index === currentImageIndex);
             });
@@ -324,40 +394,23 @@
                 thumbnailList.appendChild(thumb);
             });
         }
-
-        // 绑定箭头点击事件
         prevBtn.addEventListener('click', () => {
             currentImageIndex = (currentImageIndex - 1 + imageUrls.length) % imageUrls.length;
             updateMainImage();
         });
-
         nextBtn.addEventListener('click', () => {
             currentImageIndex = (currentImageIndex + 1) % imageUrls.length;
             updateMainImage();
         });
-
-        // 灯箱事件
         mainImage.addEventListener('click', () => {
             if (imageUrls.length > 0) {
                 lightboxImg.src = mainImage.src;
                 lightbox.classList.add('show');
             }
         });
-
-        lightboxClose.addEventListener('click', () => {
-            lightbox.classList.remove('show');
-        });
-
+        lightboxClose.addEventListener('click', () => lightbox.classList.remove('show'));
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) { // 点击背景关闭
-                lightbox.classList.remove('show');
-            }
-        });
-
-        // 收藏按钮交互 (目前仅为前端效果)
-        const favBtn = document.getElementById('fav-btn');
-        favBtn.addEventListener('click', () => {
-            favBtn.classList.toggle('favorited');
+            if (e.target === lightbox) lightbox.classList.remove('show');
         });
     });
 </script>

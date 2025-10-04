@@ -449,6 +449,9 @@
                     productLink.href = `/product-detail.html?id=${product.id}`;
                     productLink.className = 'product-item-link';
                     const coverImage = product.coverImage || 'https://placehold.co/120x120/eee/ccc?text=无图';
+                    const favoriteCount = product.favoriteCount || 0;
+                    const isFavoritedClass = product.isFavorited ? 'favorited' : '';
+                    const iconClass = product.isFavorited ? 'fa-solid fa-star' : 'fa-regular fa-star';
                     productLink.innerHTML = `
                         <div class="product-item">
                             <img src="${coverImage}" alt="${product.title}" class="product-item-image">
@@ -462,10 +465,14 @@
                                 </div>
                                 <span class="product-item-price">¥${product.price.toFixed(2)}</span>
                             </div>
-                            <div class="product-item-favorite">
-                                <button class="favorite-btn"><i class="fa-regular fa-star"></i></button>
-                                <span class="favorite-count">0人已收藏</span>
-                            </div>
+                            <div class="product-item">
+                        <div class="product-item-favorite">
+                            <button class="favorite-btn ${isFavoritedClass}" data-product-id="${product.id}">
+                                <i class="${iconClass}"></i>
+                            </button>
+                            <span class="favorite-count">${favoriteCount}人已收藏</span>
+                        </div>
+                    </div>
                         </div>`;
                     productListContainer.appendChild(productLink);
                 });
@@ -485,14 +492,26 @@
         function setupFavoriteButtons() {
             const favoriteButtons = document.querySelectorAll('.favorite-btn');
             favoriteButtons.forEach(button => {
-                if(button.dataset.listenerAttached) return;
+                if (button.dataset.listenerAttached) return;
+
                 button.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    button.classList.toggle('favorited');
-                    const icon = button.querySelector('i');
-                    icon.classList.toggle('fa-regular');
-                    icon.classList.toggle('fa-solid');
+
+                    const productId = button.dataset.productId;
+
+                    fetch(`/api/favorites/${productId}`, { method: 'POST' })
+                        .then(response => {
+                            if (response.status === 401) {
+                                alert('请先登录再收藏商品！');
+                                window.location.href = '/login.html';
+                                return;
+                            }
+                            if (!response.ok) throw new Error('操作失败');
+                            // 操作成功后，重新加载数据以获取最新状态
+                            fetchAndRenderProducts();
+                        })
+                        .catch(error => console.error("收藏操作失败:", error));
                 });
                 button.dataset.listenerAttached = 'true';
             });

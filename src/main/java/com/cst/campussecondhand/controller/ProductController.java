@@ -2,14 +2,14 @@ package com.cst.campussecondhand.controller;
 
 import com.cst.campussecondhand.entity.Product;
 import com.cst.campussecondhand.entity.User;
+import com.cst.campussecondhand.repository.FavoriteRepository; // 确保导入
 import com.cst.campussecondhand.service.ProductService;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession; // 确保导入
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -24,6 +24,10 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    // 注入我们之前创建的 FavoriteRepository
+    @Autowired
+    private FavoriteRepository favoriteRepository;
+
     /**
      * 处理创建新商品的POST请求
      */
@@ -36,19 +40,15 @@ public class ProductController {
             @RequestParam("location") String location,
             @RequestParam("sellerId") Integer sellerId,
             @RequestParam(value = "images", required = false) MultipartFile[] images,
-            HttpSession session) {
+            HttpSession session) { // 这个方法之前已经加好了
 
-        // 检查 session 中是否存在登录用户
         User loggedInUser = (User) session.getAttribute("loggedInUser");
         if (loggedInUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "请先登录再发布商品"));
         }
-
-        // （安全增强）确保发布者ID与当前登录用户ID一致
         if (loggedInUser.getId() != sellerId) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无法替他人发布商品"));
         }
-
         try {
             Product product = new Product();
             product.setTitle(title);
@@ -56,7 +56,6 @@ public class ProductController {
             product.setDescription(description);
             product.setCategory(category);
             product.setLocation(location);
-
             Product createdProduct = productService.createProduct(product, sellerId, images);
             return ResponseEntity.ok(createdProduct);
         } catch (RuntimeException e) {
@@ -72,16 +71,25 @@ public class ProductController {
     public ResponseEntity<List<Map<String, Object>>> getAllProducts(
             @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
             @RequestParam(value = "category", required = false, defaultValue = "all") String category,
-            @RequestParam(value = "sortBy", required = false, defaultValue = "latest") String sortBy) {
+            @RequestParam(value = "sortBy", required = false, defaultValue = "latest") String sortBy,
+            HttpSession session) { // <--- 错误修正：在这里添加 HttpSession session 参数
 
         List<Product> products = productService.findProducts(keyword, category, sortBy);
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
 
         List<Map<String, Object>> productsResponse = products.stream().map(product -> {
             Map<String, Object> productMap = new java.util.HashMap<>();
             productMap.put("id", product.getId());
             productMap.put("title", product.getTitle());
             productMap.put("price", product.getPrice());
-            productMap.put("description", product.getDescription());
+            productMap.put("favoriteCount", product.getFavoriteCount());
+
+            boolean isFavorited = false;
+            if (loggedInUser != null) {
+                isFavorited = favoriteRepository.existsByUserAndProduct(loggedInUser, product);
+            }
+            productMap.put("isFavorited", isFavorited);
+
             if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
                 productMap.put("coverImage", product.getImageUrls().split(",")[0]);
             } else {
@@ -101,15 +109,15 @@ public class ProductController {
         return ResponseEntity.ok(productsResponse);
     }
 
-
     /**
      * 处理获取单个商品的GET请求
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProductById(@PathVariable Integer id) {
+    public ResponseEntity<?> getProductById(@PathVariable Integer id, HttpSession session) { // <--- 错误修正：在这里也添加 HttpSession session 参数
         try {
             Product product = productService.findProductById(id);
-            // 为了安全，不直接返回整个 User 对象，而是构造一个 Map
+            User loggedInUser = (User) session.getAttribute("loggedInUser");
+
             Map<String, Object> productMap = new java.util.HashMap<>();
             productMap.put("id", product.getId());
             productMap.put("title", product.getTitle());
@@ -119,8 +127,14 @@ public class ProductController {
             productMap.put("location", product.getLocation());
             productMap.put("category", product.getCategory());
             productMap.put("createdTime", product.getCreatedTime());
+            productMap.put("favoriteCount", product.getFavoriteCount());
 
-            // 构造卖家信息
+            boolean isFavorited = false;
+            if (loggedInUser != null) {
+                isFavorited = favoriteRepository.existsByUserAndProduct(loggedInUser, product);
+            }
+            productMap.put("isFavorited", isFavorited);
+
             Map<String, Object> sellerInfo = new java.util.HashMap<>();
             sellerInfo.put("id", product.getSeller().getId());
             sellerInfo.put("nickname", product.getSeller().getNickname());
@@ -132,5 +146,4 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
     }
-
 }

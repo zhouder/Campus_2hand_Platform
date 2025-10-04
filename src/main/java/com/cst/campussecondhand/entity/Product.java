@@ -38,4 +38,7 @@ public class Product {
 
     @Column(length = 50)
     private String category; // 商品品类
+
+    @Column(name = "favorite_count", nullable = false)
+    private int favoriteCount = 0; // 商品被收藏的数量
 }
