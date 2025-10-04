@@ -257,10 +257,10 @@
         <p class="product-description" id="product-description">...</p>
 
         <div class="actions">
-            <button class="action-btn chat-btn" id="chat-btn">
+            <a href="#" class="action-btn chat-btn" id="chat-btn">
                 <i class="fa-regular fa-comment-dots"></i>
                 <span>和卖家聊</span>
-            </button>
+            </a>
             <button class="action-btn fav-btn" id="fav-btn">
                 <i class="fa-regular fa-star"></i>
                 <span id="fav-text">收藏</span>
@@ -326,7 +326,7 @@
                 document.getElementById('product-price').textContent = product.price.toFixed(2);
                 document.getElementById('product-title').textContent = product.title;
                 document.getElementById('product-description').textContent = product.description || '卖家没有填写描述哦~';
-
+                document.getElementById('chat-btn').href = `/chat.html?userId=${product.seller.id}`;
                 // 初始化收藏按钮状态
                 updateFavoriteStatus(product.isFavorited, product.favoriteCount);
 

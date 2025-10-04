@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的消息</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+        .back-to-home {
+            position: fixed; top: 40px; left: 50px;
+            width: 50px; height: 50px; background-color: #fff;
+            color: #333; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; font-size: 20px;
+            text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.2s; z-index: 1000;
+        }
+        .back-to-home:hover { transform: scale(1.1); }
+        .page-container {
+            max-width: 1100px;
+            margin: 100px auto 20px auto;
+        }
+        .chat-container {
+            display: flex;
+            height: 75vh;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .sidebar { width: 30%; max-width: 350px; border-right: 1px solid #eee; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #eee; }
+        .sidebar-header h2 { margin: 0; font-size: 1.4rem; }
+        .conversation-list { overflow-y: auto; flex-grow: 1; }
+        .conversation { display: flex; align-items: center; padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #f7f7f7; }
+        .conversation:hover, .conversation.active { background-color: #f5f5f5; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 15px; }
+        .conv-details .name { font-weight: bold; }
+        .chat-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #f9f9f9; }
+        .chat-header { padding: 20px; border-bottom: 1px solid #eee; background-color: #fff; }
+        .chat-header h3 { margin: 0; }
+        .messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+        .message { max-width: 60%; margin-bottom: 15px; padding: 10px 15px; border-radius: 18px; line-height: 1.5; word-wrap: break-word; }
+        .message.sent { background-color: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px;}
+        .message.received { background-color: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #eee; }
+        .chat-input { display: flex; padding: 20px; border-top: 1px solid #eee; background-color: #fff; }
+        .chat-input input { flex-grow: 1; border: 1px solid #ddd; border-radius: 20px; padding: 10px 15px; outline: none; font-size: 1rem; }
+        .chat-input button { border: none; background-color: #007bff; color: white; border-radius: 50%; width: 40px; height: 40px; margin-left: 10px; cursor: pointer; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<a href="/index.html" class="back-to-home">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+
+<div class="page-container">
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>聊天列表</h2>
+            </div>
+            <div class="conversation-list" id="conversation-list">
+                <p style="text-align: center; color: #888; margin-top: 20px;">正在加载会话...</p>
+            </div>
+        </div>
+        <div class="chat-area">
+            <div class="chat-header">
+                <h3 id="chat-with-name">选择一个会话开始聊天</h3>
+            </div>
+            <div class="messages" id="messages-area"></div>
+            <div class="chat-input" id="chat-input-area" style="display: none;">
+                <input type="text" id="message-input" placeholder="输入消息...">
+                <button id="send-button"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        if (!currentUser) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        let stompClient = null;
+        let activeRecipient = null;
+        let conversationPartners = new Map();
+
+        const conversationListEl = document.getElementById('conversation-list');
+        const chatWithNameEl = document.getElementById('chat-with-name');
+        const messagesAreaEl = document.getElementById('messages-area');
+        const chatInputAreaEl = document.getElementById('chat-input-area');
+        const messageInputEl = document.getElementById('message-input');
+        const sendButtonEl = document.getElementById('send-button');
+
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, onConnected, onError);
+        }
+
+        async function onConnected() {
+            stompClient.subscribe(`/user/${currentUser.id}/queue/messages`, onMessageReceived);
+            await loadInitialConversations();
+        }
+
+        function onError(error) {
+            console.error('Could not connect to WebSocket server.');
+        }
+
+        function renderConversationList() {
+            conversationListEl.innerHTML = '';
+            if (conversationPartners.size === 0) {
+                conversationListEl.innerHTML = '<p style="text-align: center; color: #888; margin-top: 20px;">暂无会话</p>';
+                return;
+            }
+            for (const user of conversationPartners.values()) {
+                const convEl = document.createElement('div');
+                convEl.className = 'conversation';
+                convEl.dataset.userId = user.id;
+                convEl.innerHTML = `<img src="${user.avatarUrl || generateAvatar(user.nickname, user.avatarBgColor)}" alt="avatar" class="avatar"><div class="conv-details"><div class="name">${user.nickname}</div></div>`;
+                convEl.addEventListener('click', () => loadChatHistory(user));
+                conversationListEl.appendChild(convEl);
+            }
+        }
+
+        async function loadInitialConversations() {
+            try { // --- 新增 try ---
+                const response = await fetch('/api/conversations');
+                if (!response.ok) { // --- 新增错误检查 ---
+                    throw new Error('Failed to load conversations');
+                }
+                const partners = await response.json();
+                partners.forEach(p => conversationPartners.set(p.id, p));
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const recipientId = parseInt(urlParams.get('userId'), 10);
+
+                if (recipientId && !conversationPartners.has(recipientId)) {
+                    try {
+                        const userResponse = await fetch(`/api/users/${recipientId}`);
+                        if (userResponse.ok) {
+                            const newUser = await userResponse.json();
+                            conversationPartners.set(newUser.id, newUser);
+                            renderConversationList();
+                            await loadChatHistory(newUser);
+                        }
+                    } catch (e) { console.error("Failed to fetch new user info"); }
+                } else {
+                    renderConversationList();
+                    if (recipientId) {
+                        const targetUser = conversationPartners.get(recipientId);
+                        if(targetUser) await loadChatHistory(targetUser);
+                    }
+                }
+            } catch (error) { // --- 新增 catch ---
+                console.error(error);
+                conversationListEl.innerHTML = '<p style="text-align: center; color: #dc3545; margin-top: 20px;">加载会话失败，请刷新重试。</p>';
+            }
+        }
+
+        async function loadChatHistory(recipient) {
+            document.querySelectorAll('.conversation').forEach(c => c.classList.remove('active'));
+            const activeConvEl = document.querySelector(`.conversation[data-user-id='${recipient.id}']`);
+            if (activeConvEl) activeConvEl.classList.add('active');
+
+            activeRecipient = recipient;
+            chatWithNameEl.textContent = `与 ${recipient.nickname} 的对话`;
+            messagesAreaEl.innerHTML = '';
+            chatInputAreaEl.style.display = 'flex';
+
+            const response = await fetch(`/api/messages/${recipient.id}`);
+            const messages = await response.json();
+            messages.forEach(displayMessage);
+        }
+
+        function displayMessage(message, isLive = false) {
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message';
+            messageEl.textContent = message.content;
+
+            const senderId = isLive ? message.sender.id : (message.sender.id || message.sender);
+
+            if (senderId === currentUser.id) {
+                messageEl.classList.add('sent');
+            } else {
+                messageEl.classList.add('received');
+            }
+            messagesAreaEl.appendChild(messageEl);
+            messagesAreaEl.scrollTop = messagesAreaEl.scrollHeight;
+        }
+
+        function sendMessage() {
+            const content = messageInputEl.value.trim();
+            if (content && stompClient && activeRecipient) {
+                const chatMessage = {
+                    sender: { id: currentUser.id },
+                    recipient: { id: activeRecipient.id },
+                    content: content
+                };
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+
+                const displayMsg = { ...chatMessage, sender: currentUser.id };
+                displayMessage(displayMsg);
+                messageInputEl.value = '';
+            }
+        }
+
+        function onMessageReceived(payload) {
+            const message = JSON.parse(payload.body);
+            if (activeRecipient && message.sender.id === activeRecipient.id) {
+                displayMessage(message, true);
+            } else {
+                if(!conversationPartners.has(message.sender.id)){
+                    conversationPartners.set(message.sender.id, message.sender);
+                    renderConversationList();
+                }
+                alert(`收到来自 ${message.sender.nickname} 的新消息！`);
+            }
+        }
+
+        sendButtonEl.addEventListener('click', sendMessage);
+        messageInputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function generateAvatar(nickname, bgColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100; canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = bgColor || '#007bff';
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.font = 'bold 50px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(nickname ? nickname.charAt(0).toUpperCase() : '?', 50, 50);
+            return canvas.toDataURL();
+        }
+
+        connect();
+    });
+</script>
+</body>
+</html>

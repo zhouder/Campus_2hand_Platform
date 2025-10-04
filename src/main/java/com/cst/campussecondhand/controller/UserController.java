@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 
+
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -135,4 +137,23 @@ public class UserController {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }
+
+    // 新增：根据用户ID获取用户的公开信息（用于聊天等场景）
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserPublicProfile(@PathVariable Integer id) {
+        try {
+            User user = userService.findById(id);
+            if (user == null) {
+                throw new RuntimeException("用户不存在");
+            }
+            // 只返回公开信息，隐藏密码等敏感数据
+            user.setPassword(null);
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+
+
 }
