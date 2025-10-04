@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class ProductService {
@@ -109,6 +112,62 @@ public class ProductService {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
         return productRepository.findAll(spec, sort);
+    }
+
+    // 新增：根据卖家ID查找其所有商品
+    public List<Product> findProductsBySellerId(Integer sellerId) {
+        return productRepository.findBySellerIdOrderByCreatedTimeDesc(sellerId);
+    }
+
+    // 修改：更新商品信息的方法
+    @Transactional
+    public Product updateProduct(Integer productId, Product productDetails, List<String> existingImageUrls, MultipartFile[] newFiles) {
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("商品不存在, ID: " + productId));
+
+        existingProduct.setTitle(productDetails.getTitle());
+        existingProduct.setPrice(productDetails.getPrice());
+        existingProduct.setDescription(productDetails.getDescription());
+        existingProduct.setCategory(productDetails.getCategory());
+        existingProduct.setLocation(productDetails.getLocation());
+
+        // 处理新上传的图片
+        List<String> newImageUrls = new ArrayList<>();
+        if (newFiles != null && newFiles.length > 0) {
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+            for (MultipartFile file : newFiles) {
+                if (file.isEmpty()) continue;
+                String uniqueFileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+                try {
+                    Files.copy(file.getInputStream(), Paths.get(UPLOAD_DIR + uniqueFileName), StandardCopyOption.REPLACE_EXISTING);
+                    newImageUrls.add("/uploads/" + uniqueFileName);
+                } catch (IOException e) {
+                    throw new RuntimeException("文件上传失败: " + file.getOriginalFilename(), e);
+                }
+            }
+        }
+
+        // 合并旧图片和新图片
+        List<String> finalImageUrls = Stream.concat(
+                existingImageUrls == null ? Stream.empty() : existingImageUrls.stream(),
+                newImageUrls.stream()
+        ).collect(Collectors.toList());
+
+        existingProduct.setImageUrls(String.join(",", finalImageUrls));
+
+        return productRepository.save(existingProduct);
+    }
+
+    // 新增：删除商品
+    @Transactional
+    public void deleteProduct(Integer productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new RuntimeException("商品不存在, ID: " + productId);
+        }
+        productRepository.deleteById(productId);
     }
 }
 

@@ -146,4 +146,103 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
         }
     }
+
+    // 新增：获取当前登录用户发布的所有商品
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyProducts(HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+        }
+        List<Product> myProducts = productService.findProductsBySellerId(loggedInUser.getId());
+
+        // 将商品列表转换为包含封面图的Map列表，方便前端处理
+        List<Map<String, Object>> productsResponse = myProducts.stream().map(product -> {
+            Map<String, Object> productMap = new java.util.HashMap<>();
+            productMap.put("id", product.getId());
+            productMap.put("title", product.getTitle());
+            productMap.put("price", product.getPrice());
+            if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
+                productMap.put("coverImage", product.getImageUrls().split(",")[0]);
+            } else {
+                productMap.put("coverImage", null);
+            }
+            return productMap;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(productsResponse);
+    }
+
+    // 修改：更新一个商品的接口
+    @PostMapping("/{id}/update")
+    public ResponseEntity<?> updateProduct(
+            @PathVariable Integer id,
+            @RequestParam("title") String title,
+            @RequestParam("price") String priceString, // 1. 将价格接收为字符串
+            @RequestParam(value = "description", required = false) String description, // 2. 将描述设为可选
+            @RequestParam("category") String category,
+            @RequestParam("location") String location,
+            @RequestParam(value = "existingImageUrls", required = false) List<String> existingImageUrls,
+            @RequestParam(value = "newImages", required = false) MultipartFile[] newImages,
+            HttpSession session) {
+
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "请先登录"));
+        }
+
+        try {
+            // 3. 在 try-catch 内部手动转换价格，增强代码健壮性
+            BigDecimal price;
+            if (priceString == null || priceString.isBlank()) {
+                throw new RuntimeException("价格不能为空");
+            }
+            try {
+                price = new BigDecimal(priceString);
+                if (price.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new RuntimeException("价格不能为负数");
+                }
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("价格格式无效，请输入有效的数字");
+            }
+
+            Product product = productService.findProductById(id);
+//            if (!product.getSeller().getId().equals(loggedInUser.getId())) {
+//                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无权修改他人商品"));
+//            }
+
+            Product productDetails = new Product();
+            productDetails.setTitle(title);
+            productDetails.setPrice(price); // 使用我们转换好的价格
+            productDetails.setDescription(description);
+            productDetails.setCategory(category);
+            productDetails.setLocation(location);
+
+            Product updatedProduct = productService.updateProduct(id, productDetails, existingImageUrls, newImages);
+            return ResponseEntity.ok(updatedProduct);
+
+        } catch (RuntimeException e) {
+            // 现在，任何转换错误或逻辑错误都会被这里捕获，并返回400错误
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // 新增：删除一个商品（下架）
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable Integer id, HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "请先登录"));
+        }
+        try {
+            Product product = productService.findProductById(id);
+            if (product.getSeller().getId() != loggedInUser.getId()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无权删除他人商品"));
+            }
+            productService.deleteProduct(id);
+            return ResponseEntity.ok(Collections.singletonMap("message", "商品下架成功"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
 }

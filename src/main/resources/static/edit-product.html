@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑商品</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .form-container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box;
+        }
+        .form-container h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; }
+        input[type="text"], select, textarea, input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .required-star { color: #e74c3c; margin-left: 4px; }
+        textarea#description { height: 150px; resize: none; }
+
+        /* Image Preview Styles */
+        .image-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .image-preview-item {
+            position: relative;
+            width: 100%;
+            padding-top: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        .image-preview-item img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: 5px; right: 5px;
+            width: 20px; height: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 14px; cursor: pointer;
+        }
+        .upload-box {
+            display: flex; justify-content: center; align-items: center;
+            width: 100%; padding-top: 100%; position: relative;
+            border: 2px dashed #ccc; border-radius: 8px; cursor: pointer;
+        }
+        .upload-box .plus-icon {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px; color: #ccc;
+        }
+
+        .button-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+        }
+        .btn {
+            flex-grow: 1; padding: 12px; border: none;
+            border-radius: 4px; color: white;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .btn-save { background-color: #28a745; }
+        .btn-delete { background-color: #dc3545; }
+        .btn-cancel { background-color: #6c757d; text-align: center; text-decoration: none; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div class="form-container" id="form-container" style="display: none;">
+    <h1>编辑商品信息</h1>
+    <form id="editForm">
+        <div class="form-group">
+            <label for="title">商品标题 <span class="required-star">*</span></label>
+            <input type="text" id="title" required>
+        </div>
+        <div class="form-group">
+            <label for="category">商品品类 <span class="required-star">*</span></label>
+            <select id="category" required>
+                <option value="electronics">数码电子</option>
+                <option value="books">书籍教材</option>
+                <option value="daily_necessities">生活日用</option>
+                <option value="stationery">文具用品</option>
+                <option value="sports">体育器材</option>
+                <option value="clothing">衣物鞋帽</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="price">价格 (元) <span class="required-star">*</span></label>
+            <input type="text" id="price" required pattern="^\d+(\.\d{1,2})?$">
+        </div>
+        <div class="form-group">
+            <label for="location">交易地点 <span class="required-star">*</span></label>
+            <input type="text" id="location" required>
+        </div>
+        <div class="form-group">
+            <label for="description">商品描述</label>
+            <textarea id="description"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>商品图片 (最多9张)</label>
+            <div class="image-preview-grid" id="imagePreviewGrid">
+            </div>
+            <input type="file" id="imageUpload" accept="image/*" multiple style="display: none;">
+        </div>
+
+        <div class="button-group">
+            <button type="submit" class="btn btn-save">保存修改</button>
+            <button type="button" id="delete-btn" class="btn btn-delete">下架商品</button>
+            <a href="/my-products.html" class="btn btn-cancel">取消</a>
+        </div>
+    </form>
+</div>
+<p id="loading-message">正在加载商品数据...</p>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('id');
+
+        // DOM Elements
+        const loadingMessage = document.getElementById('loading-message');
+        const formContainer = document.getElementById('form-container');
+        const editForm = document.getElementById('editForm');
+        const deleteBtn = document.getElementById('delete-btn');
+        const imagePreviewGrid = document.getElementById('imagePreviewGrid');
+        const imageUpload = document.getElementById('imageUpload');
+
+        // State for images
+        let imageManager = []; // Will hold objects like { type: 'url', data: '...' } or { type: 'file', data: File }
+
+        if (!productId) {
+            loadingMessage.textContent = '错误：缺少商品ID。';
+            return;
+        }
+
+        function renderImagePreviews() {
+            imagePreviewGrid.innerHTML = '';
+
+            imageManager.forEach((img, index) => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'image-preview-item';
+
+                const src = img.type === 'url' ? img.data : URL.createObjectURL(img.data);
+
+                previewItem.innerHTML = `
+                <img src="${src}" alt="图片预览">
+                <div class="remove-image-btn" data-index="${index}">&times;</div>
+            `;
+                imagePreviewGrid.appendChild(previewItem);
+            });
+
+            if (imageManager.length < 9) {
+                const uploadBox = document.createElement('label');
+                uploadBox.className = 'upload-box';
+                uploadBox.setAttribute('for', 'imageUpload');
+                uploadBox.innerHTML = '<span class="plus-icon">+</span>';
+                imagePreviewGrid.appendChild(uploadBox);
+            }
+        }
+
+        imagePreviewGrid.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-image-btn')) {
+                const indexToRemove = parseInt(event.target.getAttribute('data-index'), 10);
+                imageManager.splice(indexToRemove, 1);
+                renderImagePreviews();
+            }
+        });
+
+        imageUpload.addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            const totalFiles = imageManager.length + files.length;
+
+            if (totalFiles > 9) {
+                alert('最多只能上传9张图片。');
+                return;
+            }
+
+            files.forEach(file => imageManager.push({ type: 'file', data: file }));
+            renderImagePreviews();
+        });
+
+        // Fetch and fill form data
+        try {
+            const response = await fetch(`/api/products/${productId}`);
+            if (!response.ok) throw new Error('商品加载失败');
+            const product = await response.json();
+
+            document.getElementById('title').value = product.title;
+            document.getElementById('price').value = product.price.toFixed(2);
+            document.getElementById('location').value = product.location;
+            document.getElementById('description').value = product.description;
+            document.getElementById('category').value = product.category;
+
+            imageManager = (product.imageUrls || []).map(url => ({ type: 'url', data: url }));
+            renderImagePreviews();
+
+            loadingMessage.style.display = 'none';
+            formContainer.style.display = 'block';
+        } catch (error) {
+            console.error(error);
+            loadingMessage.textContent = '商品加载失败，请重试。';
+        }
+
+        // Save button logic
+        editForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('location', document.getElementById('location').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('category', document.getElementById('category').value);
+
+            imageManager.forEach(img => {
+                if (img.type === 'file') {
+                    formData.append('newImages', img.data);
+                } else if (img.type === 'url') {
+                    formData.append('existingImageUrls', img.data);
+                }
+            });
+
+            try {
+                const response = await fetch(`/api/products/${productId}/update`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '保存失败');
+                }
+
+                alert('商品信息更新成功！');
+                window.location.href = '/my-products.html';
+            } catch (error) {
+                console.error(error);
+                alert(`保存失败: ${error.message}`);
+            }
+        });
+
+        // Delete button logic (remains the same)
+        deleteBtn.addEventListener('click', async () => {
+            if (!confirm('确定要下架此商品吗？该操作不可恢复。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('下架失败');
+                alert('商品下架成功！');
+                window.location.href = '/my-products.html';
+            } catch (error) {
+                console.error(error);
+                alert('下架失败，请重试。');
+            }
+        });
+    });
+</script>
+</body>
+</html>
