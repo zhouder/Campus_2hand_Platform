@@ -29,6 +29,7 @@ public class User {
     private String phone; //电话
 
     private String avatarUrl; //头像的url
+    private String avatarBgColor; // 用于生成默认头像的背景色
 
     @Column(name = "created_time")
     private Date createdTime; // 账号创建时间

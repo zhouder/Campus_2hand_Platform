@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.Collections;
@@ -68,5 +69,70 @@ public class UserController {
         }
         // 用户未登录
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+    }
+
+    // 获取当前登录用户的完整信息 (用于个人中心)
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyProfile(HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+        }
+        // 从数据库重新获取最新的用户信息
+        User latestUser = userService.findById(loggedInUser.getId());
+        latestUser.setPassword("******"); // 隐藏密码
+        return ResponseEntity.ok(latestUser);
+    }
+
+    // 更新用户基本信息
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMyProfile(@RequestBody User userDetails, HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+        }
+        try {
+            User updatedUser = userService.updateUser(loggedInUser.getId(), userDetails);
+            updatedUser.setPassword(null); // 不返回密码
+            // 更新 session 中的用户信息
+            session.setAttribute("loggedInUser", updatedUser);
+            return ResponseEntity.ok(updatedUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // 修改密码
+    @PutMapping("/me/password")
+    public ResponseEntity<?> updateMyPassword(@RequestBody Map<String, String> passwordMap, HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+        }
+        try {
+            String oldPassword = passwordMap.get("oldPassword");
+            String newPassword = passwordMap.get("newPassword");
+            userService.updatePassword(loggedInUser.getId(), oldPassword, newPassword);
+            return ResponseEntity.ok(Collections.singletonMap("message", "密码修改成功"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    // 新增：处理头像上传
+    @PostMapping("/me/avatar")
+    public ResponseEntity<?> updateMyAvatar(@RequestParam("avatar") MultipartFile avatarFile, HttpSession session) {
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "用户未登录"));
+        }
+        try {
+            User updatedUser = userService.updateAvatar(loggedInUser.getId(), avatarFile);
+            updatedUser.setPassword(null);
+            session.setAttribute("loggedInUser", updatedUser);
+            return ResponseEntity.ok(updatedUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
     }
 }

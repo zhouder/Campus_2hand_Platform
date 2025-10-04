@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .profile-container {
+            width: 100%;
+            max-width: 450px;
+            background: #fff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .avatar-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #eee;
+            margin-bottom: 15px;
+        }
+        .avatar-edit-overlay {
+            position: absolute;
+            bottom: 15px;
+            right: 0;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 50%;
+            display: none; /* 编辑模式下显示 */
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .form-group input:disabled {
+            background-color: #f1f1f1;
+            color: #888;
+            cursor: not-allowed;
+        }
+        .password-toggle-icon {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        .btn {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-success { background-color: #28a745; }
+    </style>
+</head>
+<body>
+
+<div class="profile-container">
+    <label for="avatar-upload" class="avatar-wrapper">
+        <img src="https://placehold.co/100x100/eee/ccc?text=头像" alt="用户头像" class="avatar" id="avatar">
+        <div class="avatar-edit-overlay" id="avatar-edit-overlay"><i class="fa-solid fa-camera"></i></div>
+    </label>
+    <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+
+    <div class="form-group">
+        <label for="nickname">昵称</label>
+        <input type="text" id="nickname" disabled>
+    </div>
+    <div class="form-group">
+        <label for="email">邮箱</label>
+        <input type="email" id="email" disabled>
+    </div>
+    <div class="form-group">
+        <label for="phone">手机号</label>
+        <input type="tel" id="phone" disabled>
+    </div>
+
+    <div class="form-group" id="password-view-group">
+        <label>密码</label>
+        <div class="input-wrapper">
+            <input type="password" value="********" disabled>
+        </div>
+    </div>
+
+    <div id="password-edit-groups" style="display: none;">
+        <div class="form-group">
+            <label for="oldPassword">旧密码</label>
+            <input type="password" id="oldPassword" placeholder="请输入旧密码">
+        </div>
+        <div class="form-group">
+            <label for="newPassword">新密码</label>
+            <input type="password" id="newPassword" placeholder="留空则不修改密码">
+        </div>
+    </div>
+
+    <div class="button-group" id="view-mode-buttons">
+        <button class="btn btn-primary" id="edit-btn">编辑</button>
+        <a href="/index.html" class="btn btn-secondary" style="text-decoration: none;">返回</a>
+    </div>
+
+    <div class="button-group" id="edit-mode-buttons" style="display: none;">
+        <button class="btn btn-success" id="save-btn">保存</button>
+        <button class="btn btn-secondary" id="cancel-btn">取消</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // DOM 元素
+        const avatarImg = document.getElementById('avatar');
+        const avatarUpload = document.getElementById('avatar-upload');
+        const avatarEditOverlay = document.getElementById('avatar-edit-overlay');
+
+        const nicknameInput = document.getElementById('nickname');
+        const emailInput = document.getElementById('email');
+        const phoneInput = document.getElementById('phone');
+
+        const passwordViewGroup = document.getElementById('password-view-group');
+        const passwordEditGroups = document.getElementById('password-edit-groups');
+        const oldPasswordInput = document.getElementById('oldPassword');
+        const newPasswordInput = document.getElementById('newPassword');
+
+        const editBtn = document.getElementById('edit-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        const viewModeButtons = document.getElementById('view-mode-buttons');
+        const editModeButtons = document.getElementById('edit-mode-buttons');
+
+        let originalData = {};
+        let selectedAvatarFile = null;
+
+        /**
+         * 生成默认头像
+         */
+        function generateAvatar(nickname,bgColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+
+            const ctx = canvas.getContext('2d');
+
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
+            // 使用传入的颜色，如果没有，则随机选一个作为备用
+            const finalBgColor = bgColor || colors[Math.floor(Math.random() * colors.length)];
+            ctx.fillStyle = finalBgColor;
+            ctx.fillRect(0, 0, 100, 100);
+            ctx.font = 'bold 50px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const firstChar = nickname ? nickname.charAt(0).toUpperCase() : '?';
+            ctx.fillText(firstChar, 50, 50);
+
+            return canvas.toDataURL();
+        }
+
+        // 切换到编辑模式
+        function enterEditMode() {
+            nicknameInput.disabled = false;
+            emailInput.disabled = false;
+            phoneInput.disabled = false;
+            passwordViewGroup.style.display = 'none';
+            passwordEditGroups.style.display = 'block';
+            avatarEditOverlay.style.display = 'flex';
+
+            viewModeButtons.style.display = 'none';
+            editModeButtons.style.display = 'flex';
+            document.querySelector('.avatar-wrapper').setAttribute('for', 'avatar-upload'); // 允许点击
+        }
+
+        // 切换到查看模式
+        function exitEditMode() {
+            nicknameInput.value = originalData.nickname;
+            emailInput.value = originalData.email;
+            phoneInput.value = originalData.phone || '';
+            if (originalData.avatarUrl) {
+                avatarImg.src = originalData.avatarUrl;
+            } else {
+                avatarImg.src = generateAvatar(originalData.nickname, originalData.avatarBgColor);
+            }
+
+            nicknameInput.disabled = true;
+            emailInput.disabled = true;
+            phoneInput.disabled = true;
+            passwordViewGroup.style.display = 'block';
+            passwordEditGroups.style.display = 'none';
+            oldPasswordInput.value = '';
+            newPasswordInput.value = '';
+            avatarEditOverlay.style.display = 'none';
+            document.querySelector('.avatar-wrapper').removeAttribute('for'); // 禁止点击
+            selectedAvatarFile = null;
+
+            viewModeButtons.style.display = 'flex';
+            editModeButtons.style.display = 'none';
+        }
+
+        // 获取并显示用户信息
+        fetch('/api/users/me')
+            .then(response => {
+                if (response.status === 401) {
+                    alert('请先登录！');
+                    window.location.href = '/login.html';
+                    throw new Error('未登录');
+                }
+                return response.json();
+            })
+            .then(user => {
+                if(user) {
+                    originalData = user;
+                    exitEditMode(); // 用查看模式函数初始化页面
+                }
+            }).catch(err => console.error(err));
+
+        // 头像上传预览
+        avatarUpload.addEventListener('change', (event) => {
+            if (event.target.files && event.target.files[0]) {
+                selectedAvatarFile = event.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    avatarImg.src = e.target.result;
+                }
+                reader.readAsDataURL(selectedAvatarFile);
+            }
+        });
+
+        editBtn.addEventListener('click', enterEditMode);
+        cancelBtn.addEventListener('click', exitEditMode);
+
+        saveBtn.addEventListener('click', async () => {
+            // Promise.all 可以并行处理多个异步请求
+            try {
+                // 1. 更新头像 (如果有选择)
+                if (selectedAvatarFile) {
+                    const formData = new FormData();
+                    formData.append('avatar', selectedAvatarFile);
+                    const avatarResponse = await fetch('/api/users/me/avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (!avatarResponse.ok) throw new Error('头像上传失败');
+                    originalData = await avatarResponse.json(); // 更新数据
+                }
+
+                // 2. 更新基本信息
+                const updatedData = {
+                    nickname: nicknameInput.value,
+                    email: emailInput.value,
+                    phone: phoneInput.value
+                };
+                const profileResponse = await fetch('/api/users/me', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData)
+                });
+                if (!profileResponse.ok) {
+                    const error = await profileResponse.json();
+                    throw new Error(error.error || '信息更新失败');
+                }
+                originalData = await profileResponse.json(); // 更新数据
+
+                // 3. 更新密码 (如果填写了)
+                if (newPasswordInput.value) {
+                    if (!oldPasswordInput.value) {
+                        throw new Error('要修改密码，必须提供旧密码');
+                    }
+                    const passwordResponse = await fetch('/api/users/me/password', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            oldPassword: oldPasswordInput.value,
+                            newPassword: newPasswordInput.value
+                        })
+                    });
+                    if (!passwordResponse.ok) {
+                        const error = await passwordResponse.json();
+                        throw new Error(error.error || '密码修改失败');
+                    }
+                }
+
+                alert('信息更新成功！');
+                exitEditMode();
+
+            } catch (error) {
+                alert(`保存失败: ${error.message}`);
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

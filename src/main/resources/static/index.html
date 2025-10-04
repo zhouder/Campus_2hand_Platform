@@ -370,11 +370,11 @@
 
 <!-- 3. 右侧固定菜单栏 -->
 <aside class="right-sidebar">
-    <a href="#" class="sidebar-item">
+    <a href="/profile.html" class="sidebar-item">
         <div class="icon-wrapper">
-            <img src="https://placehold.co/60x60/333/fff?text=头像" alt="用户头像" class="sidebar-avatar">
+            <img src="https://placehold.co/60x60/eee/ccc?text=?" alt="用户头像" class="sidebar-avatar">
         </div>
-        <span>我的账号</span>
+        <span class="sidebar-username">个人中心</span>
     </a>
     <a href="/publish.html" class="sidebar-item">
         <div class="icon-wrapper"><i class="fa-solid fa-plus"></i></div>
@@ -483,6 +483,47 @@
             } catch (error) {
                 console.error("获取商品失败:", error);
                 loadingMessage.textContent = '加载商品失败，请稍后刷新重试。';
+            }
+        }
+
+        updateSidebarAvatar(); // 新增调用
+        /**
+         * 新增：更新侧边栏的用户头像
+         */
+        async function updateSidebarAvatar() {
+            const sidebarAvatar = document.querySelector('.sidebar-avatar');
+            const sidebarUsername = document.querySelector('.sidebar-username'); // 我们将为span添加一个class
+
+            try {
+                const response = await fetch('/api/users/status');
+                if(response.ok) {
+                    const user = await response.json();
+
+                    // 更新昵称
+                    sidebarUsername.textContent = user.nickname;
+
+                    // 更新头像
+                    if(user.avatarUrl) {
+                        sidebarAvatar.src = user.avatarUrl;
+                    } else {
+                        // 生成默认头像
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 100;
+                        canvas.height = 100;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = user.avatarBgColor || '#007bff';
+                        ctx.fillRect(0, 0, 100, 100);
+                        ctx.font = 'bold 50px Arial';
+                        ctx.fillStyle = 'white';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const firstChar = user.nickname ? user.nickname.charAt(0).toUpperCase() : '?';
+                        ctx.fillText(firstChar, 50, 50);
+                        sidebarAvatar.src = canvas.toDataURL();
+                    }
+                }
+            } catch (error) {
+                console.error("未能获取用户状态以更新头像:", error);
             }
         }
 
