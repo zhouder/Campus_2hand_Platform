@@ -4,9 +4,12 @@ import com.cst.campussecondhand.entity.Product;
 import com.cst.campussecondhand.entity.User;
 import com.cst.campussecondhand.repository.ProductRepository;
 import com.cst.campussecondhand.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -69,6 +72,42 @@ public class ProductService {
     public List<Product> findAllProducts() {
         // 按创建时间倒序
         return productRepository.findAll(Sort.by(Sort.Direction.DESC, "createdTime"));
+    }
+
+    public Product findProductById(Integer id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("商品不存在, ID: " + id));
+    }
+
+    /**
+     * 搜索、筛选和排序
+     */
+    public List<Product> findProducts(String keyword, String category, String sortBy) {
+        // 排序
+        Sort sort = switch (sortBy) {
+            case "price-asc" -> Sort.by(Sort.Direction.ASC, "price");
+            case "price-desc" -> Sort.by(Sort.Direction.DESC, "price");
+            default -> Sort.by(Sort.Direction.DESC, "createdTime"); // 默认按最新发布
+        };
+
+        Specification<Product> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 模糊查询
+            if (StringUtils.hasText(keyword)) {
+                Predicate titleLike = criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), "%" + keyword.toLowerCase() + "%");
+                Predicate descriptionLike = criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), "%" + keyword.toLowerCase() + "%");
+                predicates.add(criteriaBuilder.or(titleLike, descriptionLike));
+            }
+
+            // 品类筛选
+            if (StringUtils.hasText(category) && !"all".equalsIgnoreCase(category)) {
+                predicates.add(criteriaBuilder.equal(root.get("category"), category));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+        return productRepository.findAll(spec, sort);
     }
 }
 

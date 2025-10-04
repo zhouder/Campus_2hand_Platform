@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品详情</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 35px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 30px;
+        }
+
+        /* --- 左侧图片区 --- */
+        .product-gallery {
+            width: 450px;
+            flex-shrink: 0;
+        }
+        .main-image-container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+            background-color: #f9f9f9;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .main-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .main-image:hover {
+            transform: scale(1.05);
+        }
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.4);
+            color: white;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .main-image-container:hover .nav-arrow {
+            opacity: 1;
+        }
+        #prev-image { left: 10px; }
+        #next-image { right: 10px; }
+
+        /* --- 这是修改的核心部分 --- */
+        .thumbnail-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto; /* 关键：允许横向滚动 */
+            padding-bottom: 10px; /* 给滚动条留出一点空间 */
+            /* 让 flex 容器内的元素不换行，保持单行排列 */
+            white-space: nowrap;
+        }
+        /* 美化滚动条 (适用于 Chrome, Safari, Edge) */
+        .thumbnail-list::-webkit-scrollbar {
+            height: 6px; /* 滚动条高度 */
+        }
+        .thumbnail-list::-webkit-scrollbar-track {
+            background: #f0f0f0; /* 滚动条轨道颜色 */
+            border-radius: 3px;
+        }
+        .thumbnail-list::-webkit-scrollbar-thumb {
+            background-color: #ccc; /* 滚动条滑块颜色 */
+            border-radius: 3px;
+        }
+        .thumbnail-list::-webkit-scrollbar-thumb:hover {
+            background-color: #aaa; /* 鼠标悬停时滑块颜色 */
+        }
+        /* --- 修改结束 --- */
+
+        .thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid #ddd;
+            transition: border-color 0.3s;
+            flex-shrink: 0; /* 防止缩略图被压缩变形 */
+        }
+        .thumbnail.active {
+            border-color: #007bff;
+        }
+
+        /* --- 右侧信息区 (无变动) --- */
+        .product-details {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .product-price::before {
+            content: '¥';
+            font-size: 1.8rem;
+            margin-right: 4px;
+        }
+        .product-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .product-description {
+            color: #555;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            flex-grow: 1;
+        }
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .action-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-btn {
+            background-color: #007bff;
+            color: white;
+            flex-grow: 1;
+            justify-content: center;
+        }
+        .chat-btn:hover { background-color: #0056b3; }
+        .fav-btn {
+            background-color: rgba(214, 209, 209, 0.51);
+            color: #333;
+        }
+        .fav-btn.favorited {
+            background-color: #ffc107;
+            color: white;
+        }
+
+        #loading-message {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #888;
+        }
+
+        /* 灯箱样式 (无变动) */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox.show {
+            display: flex;
+        }
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 25px;
+            right: 45px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="product-detail-container" style="display: none;">
+    <div class="product-gallery">
+        <div class="main-image-container">
+            <img src="https://placehold.co/450x450/eee/ccc?text=Loading..." alt="商品主图" class="main-image" id="main-image">
+            <button class="nav-arrow" id="prev-image"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="nav-arrow" id="next-image"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="thumbnail-list" id="thumbnail-list"></div>
+    </div>
+
+    <div class="product-details">
+        <span class="product-price" id="product-price">...</span>
+        <h1 class="product-title" id="product-title">...</h1>
+        <p class="product-description" id="product-description">...</p>
+
+        <div class="actions">
+            <button class="action-btn chat-btn" id="chat-btn">
+                <i class="fa-regular fa-comment-dots"></i>
+                <span>和卖家聊</span>
+            </button>
+            <button class="action-btn fav-btn" id="fav-btn">
+                <i class="fa-regular fa-star"></i>
+                <span id="fav-text">收藏</span>
+            </button>
+        </div>
+    </div>
+</div>
+<p id="loading-message">正在加载商品详情...</p>
+
+<div id="lightbox" class="lightbox">
+    <span class="lightbox-close">&times;</span>
+    <img class="lightbox-content" id="lightbox-img">
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const productDetailContainer = document.getElementById('product-detail-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('id');
+
+        // 图片相关元素
+        const mainImage = document.getElementById('main-image');
+        const thumbnailList = document.getElementById('thumbnail-list');
+        const prevBtn = document.getElementById('prev-image');
+        const nextBtn = document.getElementById('next-image');
+        let currentImageIndex = 0;
+        let imageUrls = [];
+
+        // 灯箱相关元素
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxClose = document.querySelector('.lightbox-close');
+
+        if (!productId) {
+            loadingMessage.textContent = '错误：缺少商品ID。';
+            return;
+        }
+
+        fetch(`/api/products/${productId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('商品不存在或加载失败。');
+                return response.json();
+            })
+            .then(product => {
+                document.title = product.title;
+                document.getElementById('product-price').textContent = product.price.toFixed(2);
+                document.getElementById('product-title').textContent = product.title;
+                document.getElementById('product-description').textContent = product.description || '卖家没有填写描述哦~';
+
+                imageUrls = product.imageUrls || [];
+                if (imageUrls.length > 0) {
+                    updateMainImage();
+                    renderThumbnails();
+                } else {
+                    mainImage.src = 'https://placehold.co/450x450/eee/ccc?text=无图';
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                }
+
+                loadingMessage.style.display = 'none';
+                productDetailContainer.style.display = 'flex';
+            })
+            .catch(error => {
+                console.error('加载失败:', error);
+                loadingMessage.textContent = error.message;
+            });
+
+        function updateMainImage() {
+            if (imageUrls.length === 0) return;
+            mainImage.src = imageUrls[currentImageIndex];
+            // 更新缩略图的激活状态
+            document.querySelectorAll('.thumbnail').forEach((thumb, index) => {
+                thumb.classList.toggle('active', index === currentImageIndex);
+            });
+        }
+
+        function renderThumbnails() {
+            thumbnailList.innerHTML = '';
+            imageUrls.forEach((url, index) => {
+                const thumb = document.createElement('img');
+                thumb.src = url;
+                thumb.className = 'thumbnail';
+                if (index === 0) thumb.classList.add('active');
+                thumb.addEventListener('click', () => {
+                    currentImageIndex = index;
+                    updateMainImage();
+                });
+                thumbnailList.appendChild(thumb);
+            });
+        }
+
+        // 绑定箭头点击事件
+        prevBtn.addEventListener('click', () => {
+            currentImageIndex = (currentImageIndex - 1 + imageUrls.length) % imageUrls.length;
+            updateMainImage();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentImageIndex = (currentImageIndex + 1) % imageUrls.length;
+            updateMainImage();
+        });
+
+        // 灯箱事件
+        mainImage.addEventListener('click', () => {
+            if (imageUrls.length > 0) {
+                lightboxImg.src = mainImage.src;
+                lightbox.classList.add('show');
+            }
+        });
+
+        lightboxClose.addEventListener('click', () => {
+            lightbox.classList.remove('show');
+        });
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) { // 点击背景关闭
+                lightbox.classList.remove('show');
+            }
+        });
+
+        // 收藏按钮交互 (目前仅为前端效果)
+        const favBtn = document.getElementById('fav-btn');
+        favBtn.addEventListener('click', () => {
+            favBtn.classList.toggle('favorited');
+        });
+    });
+</script>
+
+</body>
+</html>

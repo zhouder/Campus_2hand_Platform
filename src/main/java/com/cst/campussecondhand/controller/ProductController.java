@@ -1,11 +1,15 @@
 package com.cst.campussecondhand.controller;
 
 import com.cst.campussecondhand.entity.Product;
+import com.cst.campussecondhand.entity.User;
 import com.cst.campussecondhand.service.ProductService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -31,7 +35,19 @@ public class ProductController {
             @RequestParam("category") String category,
             @RequestParam("location") String location,
             @RequestParam("sellerId") Integer sellerId,
-            @RequestParam(value = "images", required = false) MultipartFile[] images) {
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            HttpSession session) {
+
+        // 检查 session 中是否存在登录用户
+        User loggedInUser = (User) session.getAttribute("loggedInUser");
+        if (loggedInUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", "请先登录再发布商品"));
+        }
+
+        // （安全增强）确保发布者ID与当前登录用户ID一致
+        if (loggedInUser.getId() != sellerId) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无法替他人发布商品"));
+        }
 
         try {
             Product product = new Product();
@@ -50,12 +66,16 @@ public class ProductController {
     }
 
     /**
-     * 处理获取所有商品的GET请求
+     * 处理获取所有商品的GET请求，支持搜索、筛选和排序
      */
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getAllProducts() {
-        List<Product> products = productService.findAllProducts();
-        // 处理数据，避免敏感信息泄露
+    public ResponseEntity<List<Map<String, Object>>> getAllProducts(
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+            @RequestParam(value = "category", required = false, defaultValue = "all") String category,
+            @RequestParam(value = "sortBy", required = false, defaultValue = "latest") String sortBy) {
+
+        List<Product> products = productService.findProducts(keyword, category, sortBy);
+
         List<Map<String, Object>> productsResponse = products.stream().map(product -> {
             Map<String, Object> productMap = new java.util.HashMap<>();
             productMap.put("id", product.getId());
@@ -81,5 +101,36 @@ public class ProductController {
         return ResponseEntity.ok(productsResponse);
     }
 
-}
 
+    /**
+     * 处理获取单个商品的GET请求
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getProductById(@PathVariable Integer id) {
+        try {
+            Product product = productService.findProductById(id);
+            // 为了安全，不直接返回整个 User 对象，而是构造一个 Map
+            Map<String, Object> productMap = new java.util.HashMap<>();
+            productMap.put("id", product.getId());
+            productMap.put("title", product.getTitle());
+            productMap.put("price", product.getPrice());
+            productMap.put("description", product.getDescription());
+            productMap.put("imageUrls", product.getImageUrls() != null ? product.getImageUrls().split(",") : new String[0]);
+            productMap.put("location", product.getLocation());
+            productMap.put("category", product.getCategory());
+            productMap.put("createdTime", product.getCreatedTime());
+
+            // 构造卖家信息
+            Map<String, Object> sellerInfo = new java.util.HashMap<>();
+            sellerInfo.put("id", product.getSeller().getId());
+            sellerInfo.put("nickname", product.getSeller().getNickname());
+            sellerInfo.put("avatarUrl", product.getSeller().getAvatarUrl());
+            productMap.put("seller", sellerInfo);
+
+            return ResponseEntity.ok(productMap);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+}

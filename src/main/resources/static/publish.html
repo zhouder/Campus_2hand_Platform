@@ -324,7 +324,131 @@
     <img class="lightbox-content" id="lightboxImg">
 </div>
 
-<script src="/js/script.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+
+        // 1. 页面加载时检查用户是否登录
+        if (!loggedInUser) {
+            alert('请先登录再发布商品！');
+            // 如果未登录，直接跳转到登录页面
+            window.location.href = '/login.html';
+            return; // 阻止后续代码执行
+        }
+
+        const publishForm = document.getElementById('publishForm');
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreviewGrid = document.getElementById('imagePreviewGrid');
+        const uploadBox = document.getElementById('uploadBox');
+        let selectedFiles = []; // 用于存储用户选择的图片文件
+
+        // 2. 处理表单提交事件
+        publishForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // 使用 FormData 来构建包含文件和表单数据的请求
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('location', document.getElementById('location').value);
+
+            // 从之前存储在浏览器本地的 loggedInUser 对象中获取 sellerId
+            formData.append('sellerId', loggedInUser.id);
+
+            // 将所有选择的图片文件添加到 FormData 中
+            selectedFiles.forEach(file => {
+                formData.append('images', file);
+            });
+
+            // 发送请求到后端
+            fetch('/api/products', {
+                method: 'POST',
+                body: formData // 注意：使用 FormData 时不需要设置 Content-Type header
+            })
+                .then(response => {
+                    // 如果后端返回 401 或 403，说明 Session 过期或无效
+                    if (response.status === 401 || response.status === 403) {
+                        alert('您的登录已过期，请重新登录。');
+                        localStorage.removeItem('loggedInUser'); // 清除本地存储的用户信息
+                        window.location.href = '/login.html';
+                        throw new Error('用户未授权');
+                    }
+                    if (!response.ok) {
+                        // 处理其他错误
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.error || '发布失败，未知错误');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert('商品发布成功！');
+                    window.location.href = '/index.html'; // 成功后跳转到首页
+                })
+                .catch(error => {
+                    // 在控制台打印错误，并给用户提示
+                    console.error('发布失败:', error);
+                    if (error.message !== '用户未授权') { // 避免重复提示
+                        alert(`发布失败: ${error.message}`);
+                    }
+                });
+        });
+
+        // --- 以下是图片上传预览和删除的逻辑 ---
+
+        imageUpload.addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            const totalFiles = selectedFiles.length + files.length;
+
+            if (totalFiles > 9) {
+                alert('最多只能上传9张图片。');
+                return;
+            }
+
+            selectedFiles.push(...files);
+            renderImagePreviews();
+        });
+
+        function renderImagePreviews() {
+            // 先清空现有的预览（除了上传按钮本身）
+            imagePreviewGrid.innerHTML = '';
+            imagePreviewGrid.appendChild(uploadBox);
+
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="图片预览">
+                        <div class="remove-image-btn" data-index="${index}">&times;</div>
+                    `;
+                    // 将新的预览项插入到上传按钮之前
+                    imagePreviewGrid.insertBefore(previewItem, uploadBox);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // 如果图片数量达到9张，隐藏上传按钮
+            if (selectedFiles.length >= 9) {
+                uploadBox.style.display = 'none';
+            } else {
+                uploadBox.style.display = 'flex';
+            }
+        }
+
+        imagePreviewGrid.addEventListener('click', function(event) {
+            // 点击删除按钮时，从数组中移除对应的图片
+            if (event.target.classList.contains('remove-image-btn')) {
+                const indexToRemove = parseInt(event.target.getAttribute('data-index'), 10);
+                selectedFiles.splice(indexToRemove, 1);
+                renderImagePreviews(); // 重新渲染预览
+            }
+        });
+    });
+</script>
 </body>
 </html>
 
