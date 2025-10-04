@@ -34,38 +34,37 @@
 
         /* 顶部固定区域 */
         .header-container {
-            padding: 15px 20px;
+            padding: 15px 25px;
             background-color: #fff;
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-top-grid {
             display: grid;
-            grid-template-columns: 1fr auto 1fr;
+            grid-template-columns: 1fr auto 1fr; /* 左-中-右三列布局 */
             align-items: center;
-            width: 100%;
             gap: 20px;
         }
 
         .header-title {
             grid-column: 1 / 2;
-            justify-self: start;
+            justify-self: start; /* 左对齐 */
             font-size: 1.8rem;
             font-weight: bold;
             margin: 0;
             white-space: nowrap;
-            margin-left: 60px; /* 标题距离左侧的边距 */
+            margin-left: 60px;
+        }
+
+        .search-and-filters {
+            grid-column: 2 / 3; /* 搜索和筛选放在中间一列 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
 
         .search-bar {
-            grid-column: 2 / 3;
             display: flex;
             align-items: center;
             width: 100%;
@@ -96,7 +95,7 @@
             align-items: center;
             justify-content: center;
             gap: 15px;
-            position: relative; /* 为下拉菜单定位 */
+            position: relative;
         }
 
         .filter-btn-container {
@@ -116,7 +115,7 @@
             background-color: #f8f8f8;
         }
 
-        /* NEW: 下拉菜单样式 */
+        /* 下拉菜单样式 */
         .dropdown-menu {
             position: absolute;
             top: calc(100% + 5px);
@@ -128,7 +127,7 @@
             border: 1px solid var(--border-color);
             padding: 8px 0;
             z-index: 1001;
-            display: none; /* 默认隐藏 */
+            display: none;
             min-width: 150px;
             opacity: 0;
             transition: opacity 0.2s, transform 0.2s;
@@ -179,6 +178,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.05);
             padding: 15px;
+            gap: 20px;
         }
 
         .product-item-image {
@@ -187,7 +187,6 @@
             flex-shrink: 0;
             border-radius: 8px;
             object-fit: cover;
-            margin-right: 20px;
             background-color: var(--light-gray);
         }
 
@@ -196,7 +195,7 @@
             flex-direction: column;
             flex-grow: 1;
             min-width: 0;
-            gap: 4px;
+            gap: 6px;
         }
 
         .product-item-title {
@@ -212,6 +211,9 @@
         .product-item-meta-info {
             font-size: 0.85rem;
             color: var(--text-color-light);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .seller-location-info .seller-name {
@@ -222,7 +224,6 @@
             font-size: 1.3rem;
             font-weight: bold;
             color: var(--price-color);
-            margin-top: 4px;
         }
 
         .product-item-favorite {
@@ -230,8 +231,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-left: auto;
-            padding-left: 15px;
             align-self: stretch;
         }
 
@@ -317,102 +316,48 @@
 <div class="page-container">
     <!-- 1. 顶部固定区域 -->
     <header class="header-container">
-        <div class="header-top-grid">
-            <h1 class="header-title">校园二手市场</h1>
+        <h1 class="header-title">校园二手市场</h1>
+        <div class="search-and-filters">
             <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" placeholder="搜索商品">
             </div>
-            <div></div>
-        </div>
-        <div class="filter-buttons-wrapper">
-            <!-- 排序按钮和下拉菜单 -->
-            <div class="filter-btn-container">
-                <button class="filter-btn" id="sort-btn">最新发布 <i class="fa-solid fa-caret-down"></i></button>
-                <div class="dropdown-menu" id="sort-menu">
-                    <div class="dropdown-item active" data-value="latest">最新发布</div>
-                    <div class="dropdown-item" data-value="price-asc">价格升序</div>
-                    <div class="dropdown-item" data-value="price-desc">价格降序</div>
-                    <div class="dropdown-item" data-value="favorites">最多收藏</div>
+            <div class="filter-buttons-wrapper">
+                <!-- 排序按钮和下拉菜单 -->
+                <div class="filter-btn-container">
+                    <button class="filter-btn" id="sort-btn">最新发布 <i class="fa-solid fa-caret-down"></i></button>
+                    <div class="dropdown-menu" id="sort-menu">
+                        <div class="dropdown-item active" data-value="latest">最新发布</div>
+                        <div class="dropdown-item" data-value="price-asc">价格升序</div>
+                        <div class="dropdown-item" data-value="price-desc">价格降序</div>
+                        <div class="dropdown-item" data-value="favorites">最多收藏</div>
+                    </div>
+                </div>
+                <!-- 筛选品类按钮和下拉菜单 -->
+                <div class="filter-btn-container">
+                    <button class="filter-btn" id="category-btn">全部品类 <i class="fa-solid fa-caret-down"></i></button>
+                    <div class="dropdown-menu" id="category-menu">
+                        <div class="dropdown-item active" data-value="all">全部品类</div>
+                        <div class="dropdown-item" data-value="electronics">数码电子</div>
+                        <div class="dropdown-item" data-value="books">书籍教材</div>
+                        <div class="dropdown-item" data-value="daily_necessities">生活日用</div>
+                        <div class="dropdown-item" data-value="stationery">文具用品</div>
+                        <div class="dropdown-item" data-value="sports">体育器材</div>
+                        <div class="dropdown-item" data-value="clothing">衣物鞋帽</div>
+                        <div class="dropdown-item" data-value="other">其他品类</div>
+                    </div>
                 </div>
             </div>
-            <!-- 筛选品类按钮和下拉菜单 -->
-            <div class="filter-btn-container">
-                <button class="filter-btn" id="category-btn">全部 <i class="fa-solid fa-caret-down"></i></button>
-                <div class="dropdown-menu" id="category-menu">
-                    <div class="dropdown-item active" data-value="all">全部品类</div>
-                    <div class="dropdown-item" data-value="electronics">数码电子</div>
-                    <div class="dropdown-item" data-value="books">书籍教材</div>
-                    <div class="dropdown-item" data-value="daily_necessities">生活日用</div>
-                    <div class="dropdown-item" data-value="stationery">文具用品</div>
-                    <div class="dropdown-item" data-value="sports">体育器材</div>
-                    <div class="dropdown-item" data-value="clothing">衣物鞋帽</div>
-                    <div class="dropdown-item" data-value="other">其他品类</div>
-                </div>
-            </div>
         </div>
+        <!-- 右侧空白占位符，用于平衡布局 -->
+        <div></div>
     </header>
 
     <!-- 2. 商品列表 -->
     <main class="main-content">
-        <div class="product-list">
-            <!-- 商品项示例 1 -->
-            <div class="product-item">
-                <img src="https://placehold.co/120x120/007bff/fff?text=示例" alt="商品图片" class="product-item-image">
-                <div class="product-item-details">
-                    <h3 class="product-item-title">九成新品牌山地自行车，带车锁和车灯，骑行体验极佳</h3>
-                    <div class="product-item-meta-info">
-                        <div class="seller-location-info">
-                            <span class="seller-name">卖家：张三</span> |
-                            <span class="location">交易地点：西一栋楼下</span>
-                        </div>
-                        <div class="category-info">品类：体育器材</div>
-                    </div>
-                    <span class="product-item-price">¥288.00</span>
-                </div>
-                <div class="product-item-favorite">
-                    <button class="favorite-btn"><i class="fa-regular fa-star"></i></button>
-                    <span class="favorite-count">12人已收藏</span>
-                </div>
-            </div>
-            <!-- 商品项示例 2 -->
-            <div class="product-item">
-                <img src="https://placehold.co/120x120/28a745/fff?text=示例" alt="商品图片" class="product-item-image">
-                <div class="product-item-details">
-                    <h3 class="product-item-title">考研数学全套复习资料，包含视频课程，低价出</h3>
-                    <div class="product-item-meta-info">
-                        <div class="seller-location-info">
-                            <span class="seller-name">卖家：李四</span> |
-                            <span class="location">交易地点：图书馆门口</span>
-                        </div>
-                        <div class="category-info">品类：书籍教材</div>
-                    </div>
-                    <span class="product-item-price">¥50.00</span>
-                </div>
-                <div class="product-item-favorite">
-                    <button class="favorite-btn favorited"><i class="fa-solid fa-star"></i></button>
-                    <span class="favorite-count">35人已收藏</span>
-                </div>
-            </div>
-            <!-- 新增商品示例 -->
-            <div class="product-item">
-                <img src="https://placehold.co/120x120/ffc107/fff?text=示例" alt="商品图片" class="product-item-image">
-                <div class="product-item-details">
-                    <h3 class="product-item-title">八成新蓝牙无线耳机，音质好，续航长</h3>
-                    <div class="product-item-meta-info">
-                        <div class="seller-location-info">
-                            <span class="seller-name">卖家：王五</span> |
-                            <span class="location">交易地点：东区食堂</span>
-                        </div>
-                        <div class="category-info">品类：数码电子</div>
-                    </div>
-                    <span class="product-item-price">¥120.00</span>
-                </div>
-                <div class="product-item-favorite">
-                    <button class="favorite-btn"><i class="fa-regular fa-star"></i></button>
-                    <span class="favorite-count">28人已收藏</span>
-                </div>
-            </div>
+        <div class="product-list" id="product-list-container">
+            <!-- 商品项将由JavaScript动态生成 -->
+            <p id="loading-message">正在加载商品...</p>
         </div>
     </main>
 </div>
@@ -449,23 +394,89 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // 收藏按钮交互
-        const favoriteButtons = document.querySelectorAll('.favorite-btn');
-        favoriteButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                button.classList.toggle('favorited');
-                const icon = button.querySelector('i');
-                if (icon.classList.contains('fa-regular')) {
-                    icon.classList.remove('fa-regular');
-                    icon.classList.add('fa-solid');
-                } else {
-                    icon.classList.remove('fa-solid');
-                    icon.classList.add('fa-regular');
-                }
-            });
-        });
 
-        // NEW: 下拉菜单交互
+        /**
+         * 获取并渲染商品列表
+         */
+        async function fetchAndRenderProducts() {
+            const productListContainer = document.getElementById('product-list-container');
+            const loadingMessage = document.getElementById('loading-message');
+
+            try {
+                const response = await fetch('/api/products');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const products = await response.json();
+
+                // 清空加载提示
+                productListContainer.innerHTML = '';
+
+                if (products.length === 0) {
+                    productListContainer.innerHTML = '<p>还没有人发布商品哦，快来发布第一个吧！</p>';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'product-item';
+
+                    const coverImage = product.coverImage || 'https://placehold.co/120x120/eee/ccc?text=无图';
+
+                    productItem.innerHTML = `
+                        <img src="${coverImage}" alt="${product.title}" class="product-item-image">
+                        <div class="product-item-details">
+                            <h3 class="product-item-title">${product.title}</h3>
+                            <div class="product-item-meta-info">
+                                <div class="seller-location-info">
+                                    <span class="seller-name">卖家：${product.seller.nickname}</span> |
+                                    <span class="location">交易地点：${product.location}</span>
+                                </div>
+                                <div class="category-info">品类：${product.category}</div>
+                            </div>
+                            <span class="product-item-price">¥${product.price.toFixed(2)}</span>
+                        </div>
+                        <div class="product-item-favorite">
+                            <button class="favorite-btn"><i class="fa-regular fa-star"></i></button>
+                            <span class="favorite-count">0人已收藏</span>
+                        </div>
+                    `;
+                    productListContainer.appendChild(productItem);
+                });
+
+                // 为新生成的收藏按钮重新绑定事件
+                setupFavoriteButtons();
+
+            } catch (error) {
+                console.error("获取商品失败:", error);
+                loadingMessage.textContent = '加载商品失败，请稍后刷新重试。';
+            }
+        }
+
+        /**
+         * 收藏按钮交互
+         */
+        function setupFavoriteButtons() {
+            const favoriteButtons = document.querySelectorAll('.favorite-btn');
+            favoriteButtons.forEach(button => {
+                if(button.dataset.listenerAttached) return;
+
+                button.addEventListener('click', () => {
+                    button.classList.toggle('favorited');
+                    const icon = button.querySelector('i');
+                    if (icon.classList.contains('fa-regular')) {
+                        icon.classList.remove('fa-regular');
+                        icon.classList.add('fa-solid');
+                    } else {
+                        icon.classList.remove('fa-solid');
+                        icon.classList.add('fa-regular');
+                    }
+                });
+                button.dataset.listenerAttached = 'true';
+            });
+        }
+
+        // 下拉菜单交互
         const sortBtn = document.getElementById('sort-btn');
         const categoryBtn = document.getElementById('category-btn');
         const sortMenu = document.getElementById('sort-menu');
@@ -474,10 +485,8 @@
         function setupDropdown(button, menu) {
             button.addEventListener('click', (event) => {
                 event.stopPropagation();
-                // 关闭其他打开的菜单
                 if(menu.id === 'sort-menu') categoryMenu.classList.remove('show');
                 if(menu.id === 'category-menu') sortMenu.classList.remove('show');
-
                 menu.classList.toggle('show');
             });
 
@@ -485,11 +494,8 @@
                 if(event.target.classList.contains('dropdown-item')) {
                     const selectedText = event.target.textContent;
                     button.innerHTML = `${selectedText} <i class="fa-solid fa-caret-down"></i>`;
-
-                    // 更新选项的 active 状态
                     menu.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('active'));
                     event.target.classList.add('active');
-
                     menu.classList.remove('show');
                 }
             });
@@ -507,6 +513,9 @@
                 categoryMenu.classList.remove('show');
             }
         });
+
+        // 页面加载时，执行获取和渲染商品的功能
+        fetchAndRenderProducts();
     });
 </script>
 
