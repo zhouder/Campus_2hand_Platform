@@ -178,8 +178,8 @@ public class ProductController {
     public ResponseEntity<?> updateProduct(
             @PathVariable Integer id,
             @RequestParam("title") String title,
-            @RequestParam("price") String priceString, // 1. 将价格接收为字符串
-            @RequestParam(value = "description", required = false) String description, // 2. 将描述设为可选
+            @RequestParam("price") String priceString,
+            @RequestParam(value = "description", required = false) String description,
             @RequestParam("category") String category,
             @RequestParam("location") String location,
             @RequestParam(value = "existingImageUrls", required = false) List<String> existingImageUrls,
@@ -192,7 +192,6 @@ public class ProductController {
         }
 
         try {
-            // 3. 在 try-catch 内部手动转换价格，增强代码健壮性
             BigDecimal price;
             if (priceString == null || priceString.isBlank()) {
                 throw new RuntimeException("价格不能为空");
@@ -207,13 +206,15 @@ public class ProductController {
             }
 
             Product product = productService.findProductById(id);
-//            if (!product.getSeller().getId().equals(loggedInUser.getId())) {
-//                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无权修改他人商品"));
-//            }
+
+            // 恢复并修正权限检查：确保操作者是商品的主人
+            if (product.getSeller().getId() != loggedInUser.getId()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.singletonMap("error", "无权修改他人商品"));
+            }
 
             Product productDetails = new Product();
             productDetails.setTitle(title);
-            productDetails.setPrice(price); // 使用我们转换好的价格
+            productDetails.setPrice(price);
             productDetails.setDescription(description);
             productDetails.setCategory(category);
             productDetails.setLocation(location);
@@ -222,7 +223,6 @@ public class ProductController {
             return ResponseEntity.ok(updatedProduct);
 
         } catch (RuntimeException e) {
-            // 现在，任何转换错误或逻辑错误都会被这里捕获，并返回400错误
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
     }

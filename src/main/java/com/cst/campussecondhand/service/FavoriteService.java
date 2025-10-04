@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FavoriteService {
@@ -44,5 +46,18 @@ public class FavoriteService {
             productRepository.save(product);
             return true; // 返回 true 表示添加收藏
         }
+    }
+
+    // 新增：获取一个用户收藏的所有商品
+    public List<Product> findFavoritesByUser(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+        List<Favorite> favorites = favoriteRepository.findByUser(user);
+
+        // 从收藏列表中提取出所有的商品并返回
+        return favorites.stream()
+                .map(Favorite::getProduct)
+                .collect(Collectors.toList());
     }
 }

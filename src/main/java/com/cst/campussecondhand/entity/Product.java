@@ -29,7 +29,7 @@ public class Product {
     private Date createdTime; // 商品发布时间
 
     // 和user建立关系
-    @ManyToOne(fetch = FetchType.LAZY) // 多对一
+    @ManyToOne(fetch = FetchType.EAGER) // 多对一
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller; // 卖家信息
 

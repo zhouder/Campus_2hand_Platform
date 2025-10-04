@@ -5,6 +5,7 @@ import com.cst.campussecondhand.entity.Product;
 import com.cst.campussecondhand.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
@@ -16,4 +17,7 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
 
     // 检查用户是否收藏了某个商品
     boolean existsByUserAndProduct(User user, Product product);
+
+    // 新增：根据用户查找其所有的收藏记录
+    List<Favorite> findByUser(User user);
 }
